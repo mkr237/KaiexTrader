@@ -14,14 +14,20 @@ class Kaiex : KoinComponent {
     private val dydxExchangeService : DYDXExchangeService by inject()
 
     suspend fun start() = coroutineScope {
-        log.info("Subscribing to trades")
-        dydxExchangeService.subscribeToTrades("BTC-USD").onEach { trade ->
+
+        log.info("Subscribing to account updates")
+        dydxExchangeService.subscribeToAccountUpdates().onEach { trade ->
             log.info(trade.toString())
         }.launchIn(this)
 
-        log.info("Subscribing to orderbooks")
-        dydxExchangeService.subscribeToOrderBook("BTC-USD").onEach { ob ->
-            log.info(ob.toString())
-        }.launchIn(this)
+//        log.info("Subscribing to trades")
+//        dydxExchangeService.subscribeToTrades("BTC-USD").onEach { trade ->
+//            log.info(trade.toString())
+//        }.launchIn(this)
+
+//        log.info("Subscribing to orderbooks")
+//        dydxExchangeService.subscribeToOrderBook("BTC-USD").onEach { ob ->
+//            log.info(ob.toString())
+//        }.launchIn(this)
     }
 }
