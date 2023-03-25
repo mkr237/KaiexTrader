@@ -1,5 +1,6 @@
 package com.kaiex.model
 
+import kotlinx.coroutines.flow.Flow
 import java.time.Instant
 
 enum class Side {
@@ -36,3 +37,10 @@ data class OrderBook (
     val asks:List<OrderBookEntry>,
     val receivedTime:Instant
 )
+
+interface MarketDataService {
+    suspend fun subscribeTrades(symbol: String): Flow<Trade>
+    suspend fun unsubscribeTrades(symbol: String)
+    suspend fun subscribeOrderBook(symbol: String): Flow<OrderBook>
+    suspend fun unsubscribeOrderBook(symbol: String)
+}

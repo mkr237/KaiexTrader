@@ -87,12 +87,15 @@ class DYDXTradeStream(private val symbol:String): DYDXSocket<Trade> {
         }
     }
 
-    private val log: Logger = LoggerFactory.getLogger(javaClass)
+    private val log: Logger = LoggerFactory.getLogger("$javaClass ($symbol)")
     private val client = HttpClient(CIO) {
         engine {
             requestTimeout = 30000
         }
-        install(Logging)
+
+        install(Logging) {
+            level = LogLevel.INFO
+        }
         install(WebSockets)
         install(ContentNegotiation) {
             json()
@@ -104,7 +107,7 @@ class DYDXTradeStream(private val symbol:String): DYDXSocket<Trade> {
 
         return try {
             socket = client.webSocketSession {
-                url("${DYDXSocket.Endpoints.DYDXSocket.url}")
+                url(DYDXSocket.Endpoints.DYDXSocket.url)
             }
             if(socket?.isActive == true) {
                 Resource.Success(Unit)

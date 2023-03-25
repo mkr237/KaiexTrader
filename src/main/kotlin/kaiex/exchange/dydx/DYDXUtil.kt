@@ -1,4 +1,4 @@
-package kaiex.services.dydx
+package kaiex.exchange.dydx
 
 import kaiex.util.UUID5
 import kotlinx.serialization.encodeToString as myJsonEncode

@@ -17,7 +17,6 @@ import kotlinx.serialization.DeserializationStrategy
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.*
-import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.time.Instant
 
@@ -83,12 +82,14 @@ class DYDXOrderBookStream(private val symbol:String): DYDXSocket<OrderBook> {
         }
     }
 
-    private val log: Logger = LoggerFactory.getLogger(javaClass)
+    private val log: org.slf4j.Logger = LoggerFactory.getLogger("$javaClass ($symbol)")
     private val client = HttpClient(CIO) {
         engine {
             requestTimeout = 30000
         }
-        install(Logging)
+        install(Logging) {
+            level = LogLevel.INFO
+        }
         install(WebSockets)
         install(ContentNegotiation) {
             json()
@@ -100,7 +101,7 @@ class DYDXOrderBookStream(private val symbol:String): DYDXSocket<OrderBook> {
 
         return try {
             socket = client.webSocketSession {
-                url("${DYDXSocket.Endpoints.DYDXSocket.url}")
+                url(DYDXSocket.Endpoints.DYDXSocket.url)
             }
             if(socket?.isActive == true) {
                 Resource.Success(Unit)

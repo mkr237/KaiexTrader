@@ -5,6 +5,6 @@ enum class Type {
     LIMIT
 }
 
-data class NewOrder(val symbol: String)
-data class CancelOrder(val orderId: String)
-data class OrderUpdate(val orderId: String, val symbol: String)
+interface OrderService {
+    fun createOrder(symbol: String, type:Type, side:Side, price: Float, size: Float)
+}

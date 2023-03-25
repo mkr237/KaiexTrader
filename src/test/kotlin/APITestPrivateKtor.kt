@@ -6,9 +6,9 @@ import io.ktor.client.plugins.logging.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.serialization.kotlinx.json.*
-import kaiex.services.dydx.getAccountId
-import kaiex.services.dydx.nowISO
-import kaiex.services.dydx.sign
+import kaiex.exchange.dydx.getAccountId
+import kaiex.exchange.dydx.nowISO
+import kaiex.exchange.dydx.sign
 import kotlinx.serialization.json.Json
 
 suspend fun main() {
