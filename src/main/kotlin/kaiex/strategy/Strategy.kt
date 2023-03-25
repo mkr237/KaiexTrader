@@ -1,4 +1,4 @@
-package com.kaiex.strategy
+package kaiex.strategy
 
 interface Strategy {
 

@@ -1,4 +1,4 @@
-package com.kaiex.model
+package kaiex.model
 
 enum class Type {
     MARKET,

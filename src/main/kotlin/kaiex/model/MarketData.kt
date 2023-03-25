@@ -1,4 +1,4 @@
-package com.kaiex.model
+package kaiex.model
 
 import kotlinx.coroutines.flow.Flow
 import java.time.Instant
@@ -23,6 +23,7 @@ data class Trade (
     val size:Float,
     val price:Float,
     val createdAt:Instant,
+    val receivedAt:Instant,
     val liquidation:Boolean
 )
 

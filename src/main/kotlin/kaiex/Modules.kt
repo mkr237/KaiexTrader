@@ -1,12 +1,12 @@
-package com.kaiex
+package kaiex
 
-import com.kaiex.services.dydx.DYDXOrderBookStream
-import com.kaiex.services.dydx.DYDXExchangeService
-import com.kaiex.services.dydx.DYDXTradeStream
 import kaiex.core.MarketDataManager
 import kaiex.core.OrderManager
 import kaiex.core.RiskManager
 import kaiex.exchange.dydx.DYDXAccountStream
+import kaiex.exchange.dydx.DYDXExchangeService
+import kaiex.exchange.dydx.DYDXOrderBookStream
+import kaiex.exchange.dydx.DYDXTradeStream
 import org.koin.dsl.module
 
 val core = module {
@@ -17,7 +17,7 @@ val core = module {
 
 val dydxExchangeService = module {
     single { DYDXExchangeService() }
-    factory { params -> DYDXAccountStream() }
+    factory { DYDXAccountStream() }
     factory { params -> DYDXTradeStream(symbol = params.get()) }
     factory { params -> DYDXOrderBookStream(symbol = params.get()) }
 

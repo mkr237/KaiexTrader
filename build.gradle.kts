@@ -8,7 +8,7 @@ plugins {
     application
 }
 
-group = "com.kaiex"
+group = "kaiex"
 version = "1.0-SNAPSHOT"
 
 repositories {

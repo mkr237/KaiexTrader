@@ -1,8 +1,5 @@
-package com.kaiex.services.dydx
+package kaiex.exchange.dydx
 
-import com.kaiex.model.OrderBook
-import com.kaiex.model.OrderBookEntry
-import com.kaiex.util.Resource
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.contentnegotiation.*
@@ -11,6 +8,9 @@ import io.ktor.client.plugins.websocket.*
 import io.ktor.client.request.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.websocket.*
+import kaiex.model.OrderBook
+import kaiex.model.OrderBookEntry
+import kaiex.util.Resource
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.isActive
 import kotlinx.serialization.DeserializationStrategy
@@ -82,7 +82,7 @@ class DYDXOrderBookStream(private val symbol:String): DYDXSocket<OrderBook> {
         }
     }
 
-    private val log: org.slf4j.Logger = LoggerFactory.getLogger("$javaClass ($symbol)")
+    private val log: org.slf4j.Logger = LoggerFactory.getLogger("${javaClass.simpleName} ($symbol)")
     private val client = HttpClient(CIO) {
         engine {
             requestTimeout = 30000

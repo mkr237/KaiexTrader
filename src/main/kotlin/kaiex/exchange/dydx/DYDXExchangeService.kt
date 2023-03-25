@@ -1,10 +1,7 @@
-package com.kaiex.services.dydx
+package kaiex.exchange.dydx
 
-import com.kaiex.model.*
-import com.kaiex.util.Resource
-import kaiex.exchange.dydx.DYDXAccountStream
-import kaiex.model.AccountService
-import kaiex.model.AccountSnapshot
+import kaiex.model.*
+import kaiex.util.Resource
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import org.koin.core.component.KoinComponent
@@ -15,7 +12,7 @@ import org.slf4j.LoggerFactory
 
 class DYDXExchangeService: KoinComponent, MarketDataService, OrderService, AccountService {
 
-    private val log: Logger = LoggerFactory.getLogger(javaClass)
+    private val log: Logger = LoggerFactory.getLogger(javaClass.simpleName)
 
     /**
      * Market Data Service
@@ -104,7 +101,7 @@ class DYDXExchangeService: KoinComponent, MarketDataService, OrderService, Accou
      */
     override suspend fun subscribeAccountUpdates(): Flow<AccountSnapshot> {
 
-        val service : DYDXAccountStream by inject()
+        //val service : DYDXAccountStream by inject()
 
 //        // connect to service
 //        log.info("Creating websocket for account updates")

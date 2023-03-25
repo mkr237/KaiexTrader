@@ -1,8 +1,8 @@
-package com.kaiex.strategy
+package kaiex.strategy
 
 import org.slf4j.LoggerFactory
 import java.util.logging.Logger
 
 class CointStrategy : Strategy {
-    private val log: org.slf4j.Logger = LoggerFactory.getLogger(javaClass)
+    private val log: org.slf4j.Logger = LoggerFactory.getLogger(javaClass.simpleName)
 }

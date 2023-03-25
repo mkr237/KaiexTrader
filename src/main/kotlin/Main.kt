@@ -1,6 +1,6 @@
-import com.kaiex.Kaiex
-import com.kaiex.core
-import com.kaiex.dydxExchangeService
+import kaiex.Kaiex
+import kaiex.core
+import kaiex.dydxExchangeService
 import kotlinx.coroutines.runBlocking
 import org.koin.core.context.startKoin
 import org.koin.core.logger.Level

@@ -1,7 +1,7 @@
 package kaiex.core
 
-import com.kaiex.model.Trade
-import com.kaiex.services.dydx.DYDXExchangeService
+import kaiex.exchange.dydx.DYDXExchangeService
+import kaiex.model.Trade
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -15,7 +15,7 @@ import kotlin.collections.set
 
 class MarketDataManager : KoinComponent {
 
-    private val log: Logger = LoggerFactory.getLogger(javaClass)
+    private val log: Logger = LoggerFactory.getLogger(javaClass.simpleName)
     private val dydxExchangeService : DYDXExchangeService by inject()
 
     // TODO maintain a refCount to allow unsubscribes
@@ -26,7 +26,7 @@ class MarketDataManager : KoinComponent {
             log.info("Subscribing to trades for $symbol")
             tradeBroadcasters[symbol] = EventBroadcaster()
             CoroutineScope(Dispatchers.Default).launch {
-                dydxExchangeService.subscribeTrades((symbol)).collect { trade ->
+                dydxExchangeService.subscribeTrades((symbol)).collect { trade:Trade ->
                     tradeBroadcasters[symbol]?.sendEvent(trade) }
             }
         } else {
@@ -36,9 +36,9 @@ class MarketDataManager : KoinComponent {
         return tradeBroadcasters[symbol] ?: throw RuntimeException("Unknown Symbol: $symbol")
     }
 
-    fun unsubscribeTrades(symbol: String) {
-
-    }
+//    fun unsubscribeTrades(symbol: String) {
+//
+//    }
 
 //    fun subscribeOrderBook(symbol: String) {
 //
@@ -48,7 +48,7 @@ class MarketDataManager : KoinComponent {
 //        }.launchIn(this)
 //    }
 
-    fun unsubscribeOrderBook(symbol: String) {
-
-    }
+//    fun unsubscribeOrderBook(symbol: String) {
+//
+//    }
 }

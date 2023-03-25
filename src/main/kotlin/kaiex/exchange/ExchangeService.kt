@@ -1,7 +1,8 @@
-package com.kaiex.services
+package kaiex.exchange
 
-import com.kaiex.model.*
 import kaiex.model.AccountInfo
+import kaiex.model.OrderBook
+import kaiex.model.Trade
 import kotlinx.coroutines.flow.Flow
 
 interface ExchangeService {

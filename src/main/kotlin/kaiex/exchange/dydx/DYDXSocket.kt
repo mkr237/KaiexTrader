@@ -1,6 +1,6 @@
-package com.kaiex.services.dydx
+package kaiex.exchange.dydx
 
-import com.kaiex.util.Resource
+import kaiex.util.Resource
 import kotlinx.coroutines.flow.Flow
 
 interface DYDXSocket<T> {

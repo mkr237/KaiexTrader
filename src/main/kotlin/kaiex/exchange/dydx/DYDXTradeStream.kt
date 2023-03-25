@@ -1,8 +1,5 @@
-package com.kaiex.services.dydx
+package kaiex.exchange.dydx
 
-import com.kaiex.model.Side
-import com.kaiex.model.Trade
-import com.kaiex.util.Resource
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.contentnegotiation.*
@@ -11,6 +8,9 @@ import io.ktor.client.plugins.websocket.*
 import io.ktor.client.request.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.websocket.*
+import kaiex.model.Side
+import kaiex.model.Trade
+import kaiex.util.Resource
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.isActive
 import kotlinx.serialization.DeserializationStrategy
@@ -20,6 +20,7 @@ import kotlinx.serialization.json.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 
 /*
  *
@@ -87,7 +88,7 @@ class DYDXTradeStream(private val symbol:String): DYDXSocket<Trade> {
         }
     }
 
-    private val log: Logger = LoggerFactory.getLogger("$javaClass ($symbol)")
+    private val log: Logger = LoggerFactory.getLogger("${javaClass.simpleName} ($symbol)")
     private val client = HttpClient(CIO) {
         engine {
             requestTimeout = 30000
@@ -132,7 +133,7 @@ class DYDXTradeStream(private val symbol:String): DYDXSocket<Trade> {
         }
     }
 
-    override fun observeUpdates(): Flow<com.kaiex.model.Trade> {
+    override fun observeUpdates(): Flow<kaiex.model.Trade> {
         return try {
             socket?.incoming
                 ?.receiveAsFlow()
@@ -156,24 +157,25 @@ class DYDXTradeStream(private val symbol:String): DYDXSocket<Trade> {
         log.info("Connected with connection id: ${message.connection_id}")
     }
 
-    private fun onSubscribed(message: Subscribed): List<com.kaiex.model.Trade> {
+    private fun onSubscribed(message: Subscribed): List<kaiex.model.Trade> {
         log.debug("Subscribed to $message")
         return convertTradeList(message.contents.trades)
     }
 
-    private fun onChannelData(message: ChannelData): List<com.kaiex.model.Trade> {
+    private fun onChannelData(message: ChannelData): List<kaiex.model.Trade> {
         log.debug("Received channel data for $message")
         return convertTradeList(message.contents.trades)
     }
 
-    private fun convertTradeList(tradesIn: List<Trade>): List<com.kaiex.model.Trade> {
-        var trades = ArrayList<com.kaiex.model.Trade>()
+    private fun convertTradeList(tradesIn: List<Trade>): List<kaiex.model.Trade> {
+        var trades = ArrayList<kaiex.model.Trade>()
         tradesIn.forEach { trade ->
             trades.add(Trade(symbol,
                 Side.valueOf(trade.side),
                 trade.size.toFloat(),
                 trade.price.toFloat(),
                 Instant.parse(trade.createdAt),
+                Instant.now().truncatedTo(ChronoUnit.MILLIS),
                 trade.liquidation))
         }
         return trades

@@ -1,4 +1,4 @@
-package com.kaiex
+package kaiex
 
 import kaiex.strategy.MACDStrategy
 import kotlinx.coroutines.*
@@ -7,7 +7,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 class Kaiex : KoinComponent {
-    private val log:Logger = LoggerFactory.getLogger(javaClass)
+    private val log:Logger = LoggerFactory.getLogger(javaClass.simpleName)
 
     suspend fun start() {
 
@@ -15,9 +15,9 @@ class Kaiex : KoinComponent {
 
         // TODO - if one fails, they all stop!
         coroutineScope {
-            launch(CoroutineName("MACD (BTC-USD)")) { MACDStrategy("BTC-USD").start() }
-            launch(CoroutineName("MACD (ETH-USD)")) { MACDStrategy("ETH-USD").start() }
-            launch(CoroutineName("MACD (BTC-USD)")) { MACDStrategy("BTC-USD").start() }
+            launch { MACDStrategy("BTC-USD", 12, 26).start() }
+            launch { MACDStrategy("BTC-USD", 10, 16).start() }
+            launch { MACDStrategy("ETH-USD", 12, 26).start() }
         }
 
         log.info("All strategies complete")

@@ -3,8 +3,6 @@ package kaiex.exchange.dydx
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonParser
-import com.kaiex.services.dydx.DYDXSocket
-import com.kaiex.util.Resource
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.contentnegotiation.*
@@ -16,9 +14,7 @@ import io.ktor.websocket.*
 import kaiex.model.AccountInfo
 import kaiex.model.AccountSnapshot
 import kaiex.model.AccountUpdate
-//import kaiex.model.AccountInfo
-//import kaiex.model.AccountSnapshot
-//import kaiex.model.AccountUpdate
+import kaiex.util.Resource
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.isActive
 import kotlinx.serialization.DeserializationStrategy
@@ -247,7 +243,7 @@ class DYDXAccountStream(): DYDXSocket<AccountInfo> {
     private val DYDX_API_PASSPHRASE = System.getenv("DYDX_API_PASSPHRASE")
     //private val DYDX_ACCOUNT_ID = getAccountId(ETHEREUM_ADDRESS)
 
-    private val log: Logger = LoggerFactory.getLogger(javaClass)
+    private val log: Logger = LoggerFactory.getLogger(javaClass.simpleName)
     private val client = HttpClient(CIO) {
         engine {
             requestTimeout = 30000
@@ -266,7 +262,8 @@ class DYDXAccountStream(): DYDXSocket<AccountInfo> {
     private val gson: Gson = GsonBuilder().setPrettyPrinting().create()
     private val jp = JsonParser()
 
-    override suspend fun connect(): Resource<Unit> {
+    override suspend fun connect(): Resource
+    <Unit> {
         return try {
             socket = client.webSocketSession {
                 url(DYDXSocket.Endpoints.DYDXSocket.url)

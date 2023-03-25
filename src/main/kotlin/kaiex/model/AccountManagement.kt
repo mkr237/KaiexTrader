@@ -1,6 +1,5 @@
 package kaiex.model
 
-import com.kaiex.model.Trade
 import kotlinx.coroutines.flow.Flow
 
 interface AccountInfo
