@@ -169,7 +169,7 @@ class DYDXTradeStream(private val symbol:String): DYDXSocket<Trade> {
 
     private fun convertTradeList(tradesIn: List<Trade>): List<kaiex.model.Trade> {
         var trades = ArrayList<kaiex.model.Trade>()
-        tradesIn.forEach { trade ->
+        tradesIn.reversed().forEach { trade ->
             trades.add(Trade(symbol,
                 Side.valueOf(trade.side),
                 trade.size.toFloat(),

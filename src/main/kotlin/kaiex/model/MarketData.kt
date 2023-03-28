@@ -8,13 +8,13 @@ enum class Side {
     SELL
 }
 
-data class Candle (
-    val startTimestamp: Long,
-    val open: String,
-    val high: String,
-    val low: String,
-    val close: String,
-    val volume: String
+data class Candle (                 // TODO do we want these to be var rather than val?
+    var startTimestamp: Instant,
+    var open: Float,
+    var high: Float,
+    var low: Float,
+    var close: Float,
+    var volume: Float      // TODO Int?
 )
 
 data class Trade (
