@@ -32,6 +32,7 @@ object WebSocketServer {
                 }
             }
         }
+
         server?.start(wait = false)
     }
 

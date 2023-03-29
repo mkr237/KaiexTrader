@@ -2,12 +2,14 @@ package kaiex
 
 import kaiex.core.MarketDataManager
 import kaiex.core.OrderManager
+import kaiex.core.ReportManager
 import kaiex.core.RiskManager
 import kaiex.exchange.dydx.DYDXAccountStream
 import kaiex.exchange.dydx.DYDXExchangeService
 import kaiex.exchange.dydx.DYDXOrderBookStream
 import kaiex.exchange.dydx.DYDXTradeStream
 import kaiex.strategy.MACDStrategy
+import kaiex.ui.UIServer
 import org.koin.dsl.module
 
 val core = module {
@@ -15,6 +17,8 @@ val core = module {
     single { MarketDataManager() }
     single { OrderManager() }
     single { RiskManager() }
+    single { ReportManager() }
+    single { UIServer() }
 }
 
 val dydxExchangeService = module {

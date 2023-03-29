@@ -1,4 +1,4 @@
-package kaiex.core
+package kaiex.util
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow

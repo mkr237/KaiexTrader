@@ -1,4 +1,4 @@
-import kaiex.strategy.timedChunk
+import kaiex.util.timedChunk
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import java.time.LocalDateTime

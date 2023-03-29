@@ -1,26 +1,33 @@
 package kaiex
 
 import kaiex.strategy.MACDStrategy
+import kaiex.ui.UIServer
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 class Kaiex : KoinComponent {
     private val log:Logger = LoggerFactory.getLogger(javaClass.simpleName)
 
-    val s1 = MACDStrategy("BTC-USD", 12, 26)
+    //val s1 = MACDStrategy("BTC-USD", 12, 26)
 
     suspend fun start() {
 
-        log.info("Launching strategies")
+        log.info("Starting UI Server")
+        val uiServer : UIServer by inject()
+        GlobalScope.launch {
+            uiServer.start()
+        }
 
         // TODO - if one fails, they all stop!
+        log.info("Launching strategies")
         coroutineScope {
-            launch { s1.start() }
-
+            launch { MACDStrategy("BTC-USD", 12, 26).start() }
 //            launch { MACDStrategy("BTC-USD", 10, 16).start() }
 //            launch { MACDStrategy("ETH-USD", 12, 26).start() }
 //            launch { MACDStrategy("LINK-USD", 12, 26).start() }

@@ -2,6 +2,7 @@ package kaiex.core
 
 import kaiex.exchange.dydx.DYDXExchangeService
 import kaiex.model.Trade
+import kaiex.util.EventBroadcaster
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

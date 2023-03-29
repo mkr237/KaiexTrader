@@ -1,8 +1,8 @@
 package kaiex.strategy
 
-import kaiex.core.EventBroadcaster
+import kaiex.util.EventBroadcaster
 import kaiex.indicator.MACD
-import kaiex.model.Trade
+import kaiex.model.*
 import kaiex.util.WebSocketServer
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
@@ -15,39 +15,20 @@ import java.time.Instant
 import java.util.concurrent.LinkedBlockingQueue
 import kotlinx.serialization.encodeToString as myJsonEncode
 
-val messageQueue = LinkedBlockingQueue<String>()
-
 @Serializable
 data class TradeData(val time: Long, val price: Double, val size: Double, val macd: Double, val signal: Double)
 
 class MACDStrategy(val symbol: String,
                    val fastPeriod:Int = 12,
                    val slowPeriod:Int = 26,
-                   val signalPeriod:Int = 12): Strategy() {
+                   val signalPeriod:Int = 12): Strategy("MACDStrategy/$symbol/$fastPeriod/$slowPeriod/$signalPeriod") {
 
-    private val log: Logger =
-        LoggerFactory.getLogger("${javaClass.simpleName}($symbol,$fastPeriod,$slowPeriod,$signalPeriod)")
-
+    private val log: Logger = LoggerFactory.getLogger(strategyId)
     private val macd = MACD(fastPeriod, slowPeriod, signalPeriod)
 
     suspend fun start() {
 
-        WebSocketServer.startServer()
-
-        // tmp
-        delay(2000)
-
-        // start a coroutine to take flush the queue out to ws clients
-        GlobalScope.launch {
-            while (true) {
-                if(WebSocketServer.isConnected()) {
-                    val message = messageQueue.take()
-                    WebSocketServer.sendDataToSocket(message)
-                }
-            }
-        }
-
-        val tradeBroadcaster: EventBroadcaster<Trade> = md.subscribeTrades(symbol)
+        val tradeBroadcaster: EventBroadcaster<Trade> = marketDataManager.subscribeTrades(symbol)
         tradeBroadcaster.listenForEvents().collect { trade ->
 
             // Update the MACD with the latest trade price
@@ -68,15 +49,18 @@ class MACDStrategy(val symbol: String,
                 log.info("HOLD")
             }
 
-            val data = TradeData(
-                trade.createdAt.epochSecond,
-                trade.price.toDouble(),
-                trade.size.toDouble(),
-                macdLine,
-                signalLine
-            )
+            val snapshot = StrategySnapshot()
+            snapshot.strategyId = strategyId
+            snapshot.pnl = 0.0
+            snapshot.orders = emptyList()
+            snapshot.positions = emptyList()
+            snapshot.timeStamp = trade.createdAt.epochSecond
+            snapshot.marketData = mapOf("price" to trade.price.toDouble(),
+                                        "macd" to macdLine,
+                                        "signal" to signalLine,
+                                        "histogram" to histogram)
 
-            messageQueue.put(Json.myJsonEncode(data))
+            reportManager.submitStrategyReport(snapshot)
         }
     }
 }
