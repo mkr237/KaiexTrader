@@ -32,9 +32,9 @@ class MACDStrategy(val symbol: String,
     suspend fun start() {
 
         coroutineScope {
-//            async {
-//                marketDataManager.subscribeTrades(symbol).listenForEvents().collect { trade -> handleTradeEvent(trade) }
-//            }
+            async {
+                marketDataManager.subscribeTrades(symbol).listenForEvents().collect { trade -> handleTradeEvent(trade) }
+            }
 
             async {
                 marketDataManager.subscribeOrderBook(symbol).listenForEvents().collect { ob -> handleOrderBookUpdate(ob) }
@@ -90,7 +90,7 @@ class MACDStrategy(val symbol: String,
     }
 
     private fun handleOrderBookUpdate(ob: OrderBook) {
-        log.info("Received Order Book: $ob")
+        //log.info("Received Order Book: $ob")
 
         val bestBid = ob.bids[0].price.toDouble()
         val bestAsk = ob.asks[0].price.toDouble()

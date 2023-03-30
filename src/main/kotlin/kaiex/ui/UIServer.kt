@@ -7,8 +7,8 @@ import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
 import io.ktor.websocket.*
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
-import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -19,7 +19,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 @Serializable
-data class DataPacket(val lastIndex: Int, val data: String)
+data class DataPacket(val index: Int, val data: String)
 
 private const val updateTimeout = 1000L
 private const val heartbeatPeriod = 5000L
@@ -28,6 +28,8 @@ class UIServer : KoinComponent {
 
     private val log: Logger = LoggerFactory.getLogger(javaClass.simpleName)
     private var server:NettyApplicationEngine? = null
+
+    private var inputQueues: MutableMap<String, Channel<DataPacket>> = mutableMapOf()
 
     fun start() {
         log.info("Starting...")
@@ -41,7 +43,13 @@ class UIServer : KoinComponent {
         server!!.start(wait = true)
     }
 
-    fun addDataStream(routeId: String, getDataFromIndex: (Int) -> DataPacket?) {
+    fun createSocket(routeId: String, requestHistory: () -> Unit) {
+
+        // TMp
+        if(inputQueues.containsKey(routeId))
+            throw RuntimeException("Channel exists")
+
+        inputQueues[routeId] = Channel(capacity = 100)
 
         log.info("Creating web socket with route: $routeId")
         val app = server?.application
@@ -51,7 +59,9 @@ class UIServer : KoinComponent {
 
                 log.info("Received connection for route: $routeId")
 
-                // Set up heartbeat job
+                //requestHistory()
+
+                // set up heartbeat job
                 val heartbeatJob = launch {
                     while (isActive) {
                         log.debug("Sending heartbeat to client for route $routeId")
@@ -60,22 +70,20 @@ class UIServer : KoinComponent {
                     }
                 }
 
-                // try to send outgoing messages
+                // send outgoing messages
                 try {
-                    var nextIndex = 0
-                    val initialPacket = getDataFromIndex(0)
-                    if (initialPacket != null) nextIndex = sendData(outgoing, initialPacket)
-                    delay(updateTimeout)
 
-                    while (true) {
-                        val packet = getDataFromIndex(nextIndex)
-                        if (packet != null) nextIndex = sendData(outgoing, packet)
-                        delay(updateTimeout)
-
+                    launch {
                         withTimeoutOrNull(heartbeatPeriod) {
-                            incoming.receive()
-                        }?: throw ClosedReceiveChannelException("Heartbeat failure")
+                        incoming.receive() } ?: throw ClosedReceiveChannelException("Heartbeat failure")
                     }
+
+                    while (isActive) {
+                        val packet = inputQueues[routeId]?.receive()
+                        log.debug("Sending: $packet")
+                        outgoing.send(Frame.Text(packet!!.data))
+                    }
+
                 } catch (e: Exception) {
                     if (e is ClosedReceiveChannelException) {
                         log.info("Client disconnected for route $routeId")
@@ -83,6 +91,7 @@ class UIServer : KoinComponent {
                     } else {
                         log.error("Socket connection failed for route $routeId")
                     }
+
                 } finally {
                     heartbeatJob.cancel()
                 }
@@ -90,9 +99,9 @@ class UIServer : KoinComponent {
         }
     }
 
-     private suspend fun sendData(channel:SendChannel<Frame>, packet:DataPacket):Int {
-        log.debug("Received data: $packet")
-        channel.send(Frame.Text(packet.data))
-        return packet.lastIndex + 1
+    fun sendData(routeId: String, packet: DataPacket) {
+        log.debug("Received: $packet")
+        if(inputQueues.containsKey(routeId))
+            inputQueues[routeId]?.trySend(packet)
     }
 }

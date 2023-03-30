@@ -145,10 +145,10 @@ class DYDXOrderBookStream(private val symbol:String): DYDXSocket<OrderBook> {
                         is Subscribed-> emit(onSubscribed(dydxOrderBookUpdate))
                         is ChannelData -> {
                             onChannelData(dydxOrderBookUpdate)
-                            if(Instant.now() > lastSendTime + Duration.ofSeconds(2)) {
+                            //if(Instant.now() > lastSendTime + Duration.ofSeconds(2)) {
                                 emit(createOrderBook())
-                                lastSendTime = Instant.now()
-                            }
+                            //    lastSendTime = Instant.now()
+                            //}
                         }
                     }
                 }
@@ -165,37 +165,17 @@ class DYDXOrderBookStream(private val symbol:String): DYDXSocket<OrderBook> {
 
     private fun onSubscribed(message: Subscribed):OrderBook {
         log.debug("Subscribed to $message")
-
         currentBids = mutableMapOf()
         currentAsks = mutableMapOf()
-
         message.contents.bids.forEach { level -> currentBids[level.price] = level }
         message.contents.asks.forEach { level -> currentAsks[level.price] = level }
-
         return createOrderBook()
     }
 
     private fun onChannelData(message: ChannelData) {
         log.debug("Received channel data for $message")
-
         addOrReplaceLevels(message.contents.offset, currentBids, message.contents.bids)
         addOrReplaceLevels(message.contents.offset, currentAsks, message.contents.asks)
-
-//        val offset = message.contents.offset
-//        message.contents.bids.forEach { update ->
-//            val price = update[0]
-//            val size = update[1]
-//            if(!currentBids.containsKey(price) || (currentBids.containsKey(price) && offset > currentBids[price]!!.offset)) {
-//                currentBids[price] = Subscribed.Level(size, price, offset)
-//            }
-//        }
-//
-//        message.contents.asks.forEach { update ->
-//            val price = update[0]
-//            val size = update[1]
-//            if(!currentBids.containsKey(price) || (currentAsks.containsKey(price) && offset > currentAsks[price]!!.offset))
-//                currentAsks[price] = Subscribed.Level(size, price, offset)
-//        }
     }
 
     private fun addOrReplaceLevels(offset: String, levels: MutableMap<String, Subscribed.Level>, updates: List<List<String>>) {
