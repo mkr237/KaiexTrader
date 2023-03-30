@@ -49,10 +49,10 @@ class DYDXOrderBookStream(private val symbol:String): DYDXSocket<OrderBook> {
         val contents: Contents
     ) : Message() {
         @Serializable
-        data class Contents(val asks: List<Order>, val bids: List<Order>)
+        data class Contents(val asks: List<Level>, val bids: List<Level>)
 
         @Serializable
-        data class Order(val size: String, val price: String)
+        data class Level(val size: String, val price: String, val offset: String)
     }
 
     @Serializable
@@ -97,6 +97,10 @@ class DYDXOrderBookStream(private val symbol:String): DYDXSocket<OrderBook> {
     }
     private var socket: WebSocketSession? = null
 
+    // local order book
+    private var currentBids = mutableMapOf<String, Subscribed.Level>()
+    private var currentAsks = mutableMapOf<String, Subscribed.Level>()
+
     override suspend fun connect(): Resource<Unit> {
 
         return try {
@@ -116,7 +120,7 @@ class DYDXOrderBookStream(private val symbol:String): DYDXSocket<OrderBook> {
         return try {
             val d = JsonObject(mapOf("type" to JsonPrimitive("subscribe"),
                 "channel" to JsonPrimitive("v3_orderbook"),
-                "id" to JsonPrimitive(symbol)
+                "id" to JsonPrimitive(symbol), "includeOffsets" to JsonPrimitive("true")
             ))
             socket?.send(Frame.Text(d.toString()))
             Resource.Success(Unit)
@@ -151,35 +155,52 @@ class DYDXOrderBookStream(private val symbol:String): DYDXSocket<OrderBook> {
     }
 
     private fun onSubscribed(message: Subscribed):OrderBook {
-        log.debug("Subscribed to $message")
+        log.info("Subscribed to $message")
 
-        var bids = ArrayList<OrderBookEntry>()
-        message.contents.bids.forEach {
-            bids.add(OrderBookEntry(it.size.toFloat(), it.price.toFloat()))
-        }
+        currentBids = mutableMapOf()
+        currentAsks = mutableMapOf()
 
-        var asks = ArrayList<OrderBookEntry>()
-        message.contents.asks.forEach {
-            asks.add(OrderBookEntry(it.size.toFloat(), it.price.toFloat()))
-        }
+        message.contents.bids.forEach { level -> currentBids[level.price] = level }
+        message.contents.asks.forEach { level -> currentAsks[level.price] = level }
 
-        return OrderBook(message.id, bids, asks, Instant.now())
+        return createOrderBook()
     }
 
     private fun onChannelData(message: ChannelData):OrderBook {
-        log.debug("Received channel data for $message")
+        log.info("Received channel data for $message")
 
-        var bids = ArrayList<OrderBookEntry>()
-        message.contents.bids.forEach {
-            bids.add(OrderBookEntry(it[1].toFloat(), it[0].toFloat()))
+        val offset = message.contents.offset
+        message.contents.bids.forEach { update ->
+            val price = update[0]
+            val size = update[1]
+            log.info("*** Looking for price $price")
+            if(currentBids.containsKey(price) && offset > currentBids[price]!!.offset) {
+                log.info("*** Replacing price $price")
+                currentBids[price] = Subscribed.Level(size, price, message.contents.offset)
+            }
         }
 
-        var asks = ArrayList<OrderBookEntry>()
-        message.contents.asks.forEach {
-            asks.add(OrderBookEntry(it[1].toFloat(), it[0].toFloat()))
+        message.contents.asks.forEach { update ->
+            val price = update[0]
+            val size = update[1]
+            if(currentAsks.containsKey(price) && offset > currentAsks[price]!!.offset)
+                currentAsks[price] = Subscribed.Level(size, price, message.contents.offset)
         }
 
-        return OrderBook(message.id, bids, asks, Instant.now())
+        return createOrderBook()
+    }
+
+    private fun createOrderBook():OrderBook {
+        return OrderBook(
+            symbol,
+            currentBids
+                .filter { (_, value) -> value.size.toDouble() > 0 }
+                .map { (_, value) -> OrderBookEntry(value.size.toFloat(), value.price.toFloat()) },
+            currentAsks
+                .filter { (_, value) -> value.size.toDouble() > 0 }
+                .map { (_, value) -> OrderBookEntry(value.size.toFloat(), value.price.toFloat()) },
+            Instant.now()
+        )
     }
 
     override suspend fun disconnect() {

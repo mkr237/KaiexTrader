@@ -36,7 +36,7 @@ data class OrderBook (
     val symbol:String,
     val bids:List<OrderBookEntry>,
     val asks:List<OrderBookEntry>,
-    val receivedTime:Instant
+    val receivedAt:Instant
 )
 
 interface MarketDataService {
