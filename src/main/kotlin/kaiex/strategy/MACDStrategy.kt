@@ -1,22 +1,16 @@
 package kaiex.strategy
 
-import kaiex.util.EventBroadcaster
 import kaiex.indicator.MACD
 import kaiex.model.*
-import kaiex.util.UUID5
-import kaiex.util.WebSocketServer
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.math.BigDecimal
-import java.time.Instant
-import java.util.UUID
-import java.util.concurrent.LinkedBlockingQueue
-import kotlinx.serialization.encodeToString as myJsonEncode
+import java.util.*
+import kotlin.collections.HashMap
 
 @Serializable
 data class TradeData(val time: Long, val price: Double, val size: Double, val macd: Double, val signal: Double)
@@ -33,88 +27,86 @@ class MACDStrategy(val symbol: String,
     private val positionSize2 = BigDecimal.valueOf(0.02)
     private var position = BigDecimal.ZERO
 
+    private var md:MutableMap<String, Double> = mutableMapOf()
+
     suspend fun start() {
 
-        val tradeBroadcaster: EventBroadcaster<Trade> = marketDataManager.subscribeTrades(symbol)
-        tradeBroadcaster.listenForEvents().collect { trade ->
+        coroutineScope {
+//            async {
+//                marketDataManager.subscribeTrades(symbol).listenForEvents().collect { trade -> handleTradeEvent(trade) }
+//            }
 
-            // Update the MACD with the latest trade price
-            macd.update(trade.price.toDouble())
-
-            // Print the MACD values
-            val macdLine = macd.getMACDLine()
-            val signalLine = macd.getSignalLine()
-            val histogram = macd.getHistogram()
-            log.info("MACD line: $macdLine, Signal line: $signalLine, Histogram: $histogram")
-
-            //
-            val newOrders = mutableListOf<Order>()
-            if (macdLine > signalLine) {
-                if(position.equals(BigDecimal.ZERO)) {
-                    newOrders.add(createOrder(Side.BUY, trade.price, positionSize.toFloat()))
-                    position += positionSize
-                } else if(position < BigDecimal.ZERO) {
-                    newOrders.add(createOrder(Side.BUY, trade.price, positionSize2.toFloat()))
-                    position += positionSize2
-                }
-            } else if (macdLine < signalLine) {
-                if(position.equals(BigDecimal.ZERO)) {
-                    newOrders.add(createOrder(Side.SELL, trade.price, positionSize.toFloat()))
-                    position -= positionSize
-                } else if(position > BigDecimal.ZERO) {
-                    newOrders.add(createOrder(Side.SELL, trade.price, positionSize2.toFloat()))
-                    position -= positionSize2
-                }
+            async {
+                marketDataManager.subscribeOrderBook(symbol).listenForEvents().collect { ob -> handleOrderBookUpdate(ob) }
             }
+        }
+    }
 
-            // create and report a strategy snapshot
-            val snapshot = StrategySnapshot()
-            snapshot.strategyId = strategyId
-            snapshot.pnl = 0.0
-            snapshot.orders = newOrders
-            snapshot.positions = emptyList()
-            snapshot.timeStamp = trade.createdAt.epochSecond
-            snapshot.marketData = mapOf("price" to trade.price.toDouble(),
-                                        "macd" to macdLine,
-                                        "signal" to signalLine,
-                                        "histogram" to histogram)
+    private fun handleTradeEvent(trade: Trade) {
 
-            reportManager.submitStrategyReport(snapshot)
+        log.info("Received Trade: $trade")
+
+        // Update the MACD with the latest trade price
+        macd.update(trade.price.toDouble())
+
+        // Print the MACD values
+        val macdLine = macd.getMACDLine()
+        val signalLine = macd.getSignalLine()
+        val histogram = macd.getHistogram()
+        log.info("MACD line: $macdLine, Signal line: $signalLine, Histogram: $histogram")
+
+        //
+        val newOrders = mutableListOf<Order>()
+        if (macdLine > signalLine) {
+            if(position.equals(BigDecimal.ZERO)) {
+                newOrders.add(createOrder(Side.BUY, trade.price, positionSize.toFloat()))
+                position += positionSize
+            } else if(position < BigDecimal.ZERO) {
+                newOrders.add(createOrder(Side.BUY, trade.price, positionSize2.toFloat()))
+                position += positionSize2
+            }
+        } else if (macdLine < signalLine) {
+            if(position.equals(BigDecimal.ZERO)) {
+                newOrders.add(createOrder(Side.SELL, trade.price, positionSize.toFloat()))
+                position -= positionSize
+            } else if(position > BigDecimal.ZERO) {
+                newOrders.add(createOrder(Side.SELL, trade.price, positionSize2.toFloat()))
+                position -= positionSize2
+            }
         }
 
-//        val orderBookBroadcaster: EventBroadcaster<OrderBook> = marketDataManager.subscribeOrderBook(symbol)
-//        orderBookBroadcaster.listenForEvents().collect { ob ->
-//            log.info("Received Order Book: $ob")
-//
-//            val bestBid = ob.bids[0].price.toDouble()
-//            val bestAsk = ob.asks[0].price.toDouble()
-//            val midPrice = bestBid + ((bestAsk - bestBid) / 2)
-//
-//            // Update the MACD with the latest trade price
-//            macd.update(midPrice)
-//
-//            // Print the MACD values
-//            val macdLine = macd.getMACDLine()
-//            val signalLine = macd.getSignalLine()
-//            val histogram = macd.getHistogram()
-//            log.info("MACD line: $macdLine, Signal line: $signalLine, Histogram: $histogram")
-//
-//            // create and report a strategy snapshot
-//            val snapshot = StrategySnapshot()
-//            snapshot.strategyId = strategyId
-//            snapshot.pnl = 0.0
-//            snapshot.orders = emptyList()
-//            snapshot.positions = emptyList()
-//            snapshot.timeStamp = ob.receivedAt.epochSecond
-//            snapshot.marketData = mapOf("bestBid" to bestBid,
-//                                        "bestAsk" to bestAsk,
-//                                        "midPrice" to midPrice,
-//                                        "macd" to macdLine,
-//                                        "signal" to signalLine,
-//                                        "histogram" to histogram)
-//
-//            reportManager.submitStrategyReport(snapshot)
-//        }
+        // update market data
+        md["price"] = trade.price.toDouble()
+        md["macd"] = macdLine
+        md["signal"] = signalLine
+        md["histogram"] = histogram
+
+        // create and report a strategy snapshot
+        var snapshot = StrategyReport(strategyId)
+        snapshot.orders = ArrayList(newOrders)
+        snapshot.timeStamp = trade.createdAt.epochSecond
+        snapshot.marketData = HashMap(md)
+        reportManager.submitStrategyReport(snapshot)
+    }
+
+    private fun handleOrderBookUpdate(ob: OrderBook) {
+        log.info("Received Order Book: $ob")
+
+        val bestBid = ob.bids[0].price.toDouble()
+        val bestAsk = ob.asks[0].price.toDouble()
+        val midPrice = bestBid + ((bestAsk - bestBid) / 2)
+
+        // update market data
+        md["bestBid"] = bestBid
+        md["bestAsk"] = bestAsk
+        md["midPrice"] = midPrice
+
+        // create and report a strategy snapshot
+        var snapshot = StrategyReport(strategyId)
+        snapshot.orders = mutableListOf()
+        snapshot.timeStamp = ob.receivedAt.epochSecond      // TODO different to createdAt as per trades
+        snapshot.marketData = HashMap(md)
+        reportManager.submitStrategyReport(snapshot)
     }
 
     private fun createOrder(side: Side, price: Float, size: Float):Order {

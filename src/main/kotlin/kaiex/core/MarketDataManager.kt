@@ -46,7 +46,6 @@ class MarketDataManager : KoinComponent {
     }
 
     fun subscribeOrderBook(symbol: String): EventBroadcaster<OrderBook> {
-
         if(!orderBookBroadcasters.containsKey(symbol)) {
             orderBookBroadcasters[symbol] = EventBroadcaster()
             CoroutineScope(Dispatchers.Default).launch {

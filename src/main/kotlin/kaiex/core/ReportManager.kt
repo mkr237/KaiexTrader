@@ -1,6 +1,6 @@
 package kaiex.core
 
-import kaiex.strategy.Strategy
+import kaiex.strategy.StrategyReport
 import kaiex.ui.DataPacket
 import kaiex.ui.UIServer
 import kotlinx.serialization.json.Json
@@ -17,9 +17,9 @@ class ReportManager : KoinComponent {
 
     private val uiServer : UIServer by inject()
 
-    private val strategies:MutableMap<String, MutableList<Strategy.StrategySnapshot>> = mutableMapOf()
+    private val strategies:MutableMap<String, MutableList<StrategyReport>> = mutableMapOf()
 
-    fun submitStrategyReport(snapshot: Strategy.StrategySnapshot) {
+    fun submitStrategyReport(snapshot: StrategyReport) {
         log.info("Received strategy snapshot: $snapshot")
         if(!strategies.containsKey(snapshot.strategyId)) {
 

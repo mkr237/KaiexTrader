@@ -18,6 +18,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.*
 import org.slf4j.LoggerFactory
+import java.time.Duration
 import java.time.Instant
 
 /*
@@ -101,6 +102,8 @@ class DYDXOrderBookStream(private val symbol:String): DYDXSocket<OrderBook> {
     private var currentBids = mutableMapOf<String, Subscribed.Level>()
     private var currentAsks = mutableMapOf<String, Subscribed.Level>()
 
+    private var lastSendTime = Instant.now()
+
     override suspend fun connect(): Resource<Unit> {
 
         return try {
@@ -140,7 +143,13 @@ class DYDXOrderBookStream(private val symbol:String): DYDXSocket<OrderBook> {
                     when(val dydxOrderBookUpdate = Json.decodeFromString<Message>(json)) {
                         is Connected -> onConnected(dydxOrderBookUpdate)
                         is Subscribed-> emit(onSubscribed(dydxOrderBookUpdate))
-                        is ChannelData -> emit(onChannelData(dydxOrderBookUpdate))
+                        is ChannelData -> {
+                            onChannelData(dydxOrderBookUpdate)
+                            if(Instant.now() > lastSendTime + Duration.ofSeconds(2)) {
+                                emit(createOrderBook())
+                                lastSendTime = Instant.now()
+                            }
+                        }
                     }
                 }
                 ?: flow { }
@@ -155,7 +164,7 @@ class DYDXOrderBookStream(private val symbol:String): DYDXSocket<OrderBook> {
     }
 
     private fun onSubscribed(message: Subscribed):OrderBook {
-        log.info("Subscribed to $message")
+        log.debug("Subscribed to $message")
 
         currentBids = mutableMapOf()
         currentAsks = mutableMapOf()
@@ -166,42 +175,49 @@ class DYDXOrderBookStream(private val symbol:String): DYDXSocket<OrderBook> {
         return createOrderBook()
     }
 
-    private fun onChannelData(message: ChannelData):OrderBook {
-        log.info("Received channel data for $message")
+    private fun onChannelData(message: ChannelData) {
+        log.debug("Received channel data for $message")
 
-        val offset = message.contents.offset
-        message.contents.bids.forEach { update ->
+        addOrReplaceLevels(message.contents.offset, currentBids, message.contents.bids)
+        addOrReplaceLevels(message.contents.offset, currentAsks, message.contents.asks)
+
+//        val offset = message.contents.offset
+//        message.contents.bids.forEach { update ->
+//            val price = update[0]
+//            val size = update[1]
+//            if(!currentBids.containsKey(price) || (currentBids.containsKey(price) && offset > currentBids[price]!!.offset)) {
+//                currentBids[price] = Subscribed.Level(size, price, offset)
+//            }
+//        }
+//
+//        message.contents.asks.forEach { update ->
+//            val price = update[0]
+//            val size = update[1]
+//            if(!currentBids.containsKey(price) || (currentAsks.containsKey(price) && offset > currentAsks[price]!!.offset))
+//                currentAsks[price] = Subscribed.Level(size, price, offset)
+//        }
+    }
+
+    private fun addOrReplaceLevels(offset: String, levels: MutableMap<String, Subscribed.Level>, updates: List<List<String>>) {
+        updates.forEach { update ->
             val price = update[0]
             val size = update[1]
-            log.info("*** Looking for price $price")
-            if(currentBids.containsKey(price) && offset > currentBids[price]!!.offset) {
-                log.info("*** Replacing price $price")
-                currentBids[price] = Subscribed.Level(size, price, message.contents.offset)
+            if(!levels.containsKey(price) || (levels.containsKey(price) && offset > levels[price]!!.offset)) {
+                levels[price] = Subscribed.Level(size, price, offset)
             }
         }
-
-        message.contents.asks.forEach { update ->
-            val price = update[0]
-            val size = update[1]
-            if(currentAsks.containsKey(price) && offset > currentAsks[price]!!.offset)
-                currentAsks[price] = Subscribed.Level(size, price, message.contents.offset)
-        }
-
-        return createOrderBook()
     }
 
-    private fun createOrderBook():OrderBook {
-        return OrderBook(
-            symbol,
-            currentBids
-                .filter { (_, value) -> value.size.toDouble() > 0 }
-                .map { (_, value) -> OrderBookEntry(value.size.toFloat(), value.price.toFloat()) },
-            currentAsks
-                .filter { (_, value) -> value.size.toDouble() > 0 }
-                .map { (_, value) -> OrderBookEntry(value.size.toFloat(), value.price.toFloat()) },
-            Instant.now()
-        )
-    }
+    private fun createOrderBook():OrderBook = OrderBook(
+        symbol,
+        currentBids
+            .filter { (_, value) -> value.size.toDouble() > 0.0 }
+            .map { (_, value) -> OrderBookEntry(value.size.toFloat(), value.price.toFloat()) },
+        currentAsks
+            .filter { (_, value) -> value.size.toDouble() > 0.0 }
+            .map { (_, value) -> OrderBookEntry(value.size.toFloat(), value.price.toFloat()) },
+        Instant.now()
+    )
 
     override suspend fun disconnect() {
         socket?.close()

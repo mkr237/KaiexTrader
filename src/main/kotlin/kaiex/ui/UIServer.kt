@@ -21,6 +21,9 @@ import org.slf4j.LoggerFactory
 @Serializable
 data class DataPacket(val lastIndex: Int, val data: String)
 
+private const val updateTimeout = 1000L
+private const val heartbeatPeriod = 5000L
+
 class UIServer : KoinComponent {
 
     private val log: Logger = LoggerFactory.getLogger(javaClass.simpleName)
@@ -53,7 +56,7 @@ class UIServer : KoinComponent {
                     while (isActive) {
                         log.debug("Sending heartbeat to client for route $routeId")
                         outgoing.send(Frame.Text("heartbeat"))
-                        delay(5000)
+                        delay(heartbeatPeriod)
                     }
                 }
 
@@ -62,14 +65,14 @@ class UIServer : KoinComponent {
                     var nextIndex = 0
                     val initialPacket = getDataFromIndex(0)
                     if (initialPacket != null) nextIndex = sendData(outgoing, initialPacket)
-                    delay(2000)
+                    delay(updateTimeout)
 
                     while (true) {
                         val packet = getDataFromIndex(nextIndex)
                         if (packet != null) nextIndex = sendData(outgoing, packet)
-                        delay(2000)
+                        delay(updateTimeout)
 
-                        withTimeoutOrNull(5000) {
+                        withTimeoutOrNull(heartbeatPeriod) {
                             incoming.receive()
                         }?: throw ClosedReceiveChannelException("Heartbeat failure")
                     }
