@@ -31,16 +31,12 @@ class ReportManager : KoinComponent {
             strategies[snapshot.strategyId] = mutableListOf(snapshot)
 
             // create e UI socket
-            uiServer.createSocket("/${snapshot.strategyId}") {
-                strategies[snapshot.strategyId]?.forEach { report ->
-                    uiServer.sendData("/${snapshot.strategyId}", DataPacket(index++, format.myJsonEncode(report)))
-                }
-            }
+            uiServer.createSocket("/${snapshot.strategyId}")
 
         } else {
 
             // add to history
-            log.info("Adding report to strategy history: $snapshot")
+            log.debug("Adding report to strategy history: $snapshot")
             strategies[snapshot.strategyId]!!.add(snapshot)
         }
 

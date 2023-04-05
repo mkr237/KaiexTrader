@@ -1,9 +1,11 @@
 package kaiex.ui
 
+import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.cors.routing.*
+import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
 import io.ktor.websocket.*
@@ -17,6 +19,9 @@ import kotlinx.serialization.Serializable
 import org.koin.core.component.KoinComponent
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.util.LinkedList
+import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.CountDownLatch
 
 @Serializable
 data class DataPacket(val index: Int, val data: String)
@@ -30,26 +35,36 @@ class UIServer : KoinComponent {
     private var server:NettyApplicationEngine? = null
 
     private var inputQueues: MutableMap<String, Channel<DataPacket>> = mutableMapOf()
+    private val sessions = CopyOnWriteArrayList<WebSocketSession>()
+
+    // TODO - needs to be per route
+    private val messageHistory = LinkedList<DataPacket>()
 
     fun start() {
         log.info("Starting...")
         server = embeddedServer(Netty, 8081) {
             install(WebSockets)
-            install(CORS) {// TODO - Need this?
-                anyHost()
+        }
+
+        // Test
+        server!!.application.routing {
+            route("/hello", HttpMethod.Get) {
+                handle {
+                    call.respondText("Hello")
+                }
             }
         }
 
         server!!.start(wait = true)
     }
 
-    fun createSocket(routeId: String, requestHistory: () -> Unit) {
+    fun createSocket(routeId: String) {
 
-        // TMp
+        //
         if(inputQueues.containsKey(routeId))
             throw RuntimeException("Channel exists")
 
-        inputQueues[routeId] = Channel(capacity = 100)
+        inputQueues[routeId] = Channel(capacity = 1000)     // TODO too big?
 
         log.info("Creating web socket with route: $routeId")
         val app = server?.application
@@ -59,7 +74,15 @@ class UIServer : KoinComponent {
 
                 log.info("Received connection for route: $routeId")
 
-                //requestHistory()
+                // store session
+                sessions += this
+
+                // Send message history to new session
+                log.info("Sending history of ${messageHistory.size}")
+                messageHistory.forEach { packet ->
+                    log.info("Sending $packet")
+                    send(Frame.Text(packet.data))
+                }
 
                 // set up heartbeat job
                 val heartbeatJob = launch {
@@ -80,8 +103,18 @@ class UIServer : KoinComponent {
 
                     while (isActive) {
                         val packet = inputQueues[routeId]?.receive()
-                        log.debug("Sending: $packet")
-                        outgoing.send(Frame.Text(packet!!.data))
+
+                        //outgoing.send(Frame.Text(packet!!.data))
+
+                        messageHistory.add(packet!!)
+                        if (messageHistory.size > 1000) {
+                            messageHistory.removeFirst()
+                        }
+
+                            //log.info("Sending to ${sessions.size} sessions: $packet")
+                        sessions.forEach {
+                            it.send(Frame.Text(packet.data))
+                        }
                     }
 
                 } catch (e: Exception) {
@@ -89,10 +122,11 @@ class UIServer : KoinComponent {
                         log.info("Client disconnected for route $routeId")
                         outgoing.close()
                     } else {
-                        log.error("Socket connection failed for route $routeId")
+                        log.error("Socket connection failed for route $routeId: $e")
                     }
 
                 } finally {
+                    sessions -= this
                     heartbeatJob.cancel()
                 }
             }

@@ -8,6 +8,7 @@ import io.ktor.client.plugins.websocket.*
 import io.ktor.client.request.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.websocket.*
+import kaiex.model.Order
 import kaiex.model.OrderBook
 import kaiex.model.OrderBookEntry
 import kaiex.util.Resource
@@ -20,6 +21,8 @@ import kotlinx.serialization.json.*
 import org.slf4j.LoggerFactory
 import java.time.Duration
 import java.time.Instant
+import java.util.SortedMap
+import java.util.TreeMap
 
 /*
  *
@@ -99,10 +102,12 @@ class DYDXOrderBookStream(private val symbol:String): DYDXSocket<OrderBook> {
     private var socket: WebSocketSession? = null
 
     // local order book
-    private var currentBids = mutableMapOf<String, Subscribed.Level>()
-    private var currentAsks = mutableMapOf<String, Subscribed.Level>()
+    private var currentBids = TreeMap<Float, Subscribed.Level>(Comparator.reverseOrder())
+    private var currentAsks = TreeMap<Float, Subscribed.Level>()
 
     private var lastSendTime = Instant.now()
+
+    private var nextSequenceNumber:Int = 0
 
     override suspend fun connect(): Resource<Unit> {
 
@@ -138,7 +143,7 @@ class DYDXOrderBookStream(private val symbol:String): DYDXSocket<OrderBook> {
             socket?.incoming
                 ?.receiveAsFlow()
                 ?.filter { it is Frame.Text }
-                ?.transform {
+                ?.transform { it ->
                     val json = (it as? Frame.Text)?.readText() ?: ""
                     when(val dydxOrderBookUpdate = Json.decodeFromString<Message>(json)) {
                         is Connected -> onConnected(dydxOrderBookUpdate)
@@ -146,7 +151,8 @@ class DYDXOrderBookStream(private val symbol:String): DYDXSocket<OrderBook> {
                         is ChannelData -> {
                             onChannelData(dydxOrderBookUpdate)
                             //if(Instant.now() > lastSendTime + Duration.ofSeconds(2)) {
-                                emit(createOrderBook())
+                            val ob = createOrderBook()
+                            emit(ob)
                             //    lastSendTime = Instant.now()
                             //}
                         }
@@ -165,10 +171,10 @@ class DYDXOrderBookStream(private val symbol:String): DYDXSocket<OrderBook> {
 
     private fun onSubscribed(message: Subscribed):OrderBook {
         log.debug("Subscribed to $message")
-        currentBids = mutableMapOf()
-        currentAsks = mutableMapOf()
-        message.contents.bids.forEach { level -> currentBids[level.price] = level }
-        message.contents.asks.forEach { level -> currentAsks[level.price] = level }
+        currentBids = TreeMap<Float, Subscribed.Level>(Comparator.reverseOrder())
+        currentAsks = TreeMap<Float, Subscribed.Level>()
+        message.contents.bids.forEach { level -> currentBids[level.price.toFloat()] = level }
+        message.contents.asks.forEach { level -> currentAsks[level.price.toFloat()] = level }
         return createOrderBook()
     }
 
@@ -178,17 +184,19 @@ class DYDXOrderBookStream(private val symbol:String): DYDXSocket<OrderBook> {
         addOrReplaceLevels(message.contents.offset, currentAsks, message.contents.asks)
     }
 
-    private fun addOrReplaceLevels(offset: String, levels: MutableMap<String, Subscribed.Level>, updates: List<List<String>>) {
+    private fun addOrReplaceLevels(offset: String, levels: SortedMap<Float, Subscribed.Level>, updates: List<List<String>>) {
         updates.forEach { update ->
-            val price = update[0]
+            val price = update[0].toFloat()
+            val strPrice = update[0]
             val size = update[1]
             if(!levels.containsKey(price) || (levels.containsKey(price) && offset > levels[price]!!.offset)) {
-                levels[price] = Subscribed.Level(size, price, offset)
+                levels[price] = Subscribed.Level(size, strPrice, offset)
             }
         }
     }
 
     private fun createOrderBook():OrderBook = OrderBook(
+        nextSequenceNumber++,
         symbol,
         currentBids
             .filter { (_, value) -> value.size.toDouble() > 0.0 }
@@ -198,6 +206,25 @@ class DYDXOrderBookStream(private val symbol:String): DYDXSocket<OrderBook> {
             .map { (_, value) -> OrderBookEntry(value.size.toFloat(), value.price.toFloat()) },
         Instant.now()
     )
+
+//    private fun createOrderBook2() : OrderBook {
+//
+//        val bids = mutableListOf<OrderBookEntry>()
+//        val asks = mutableListOf<OrderBookEntry>()
+//
+//        log.info("----------- BIDS ------------")
+//        currentBids.keys.filter { currentBids[it]!!.size.toDouble() > 0 }.reversed().take(10).forEach {
+//            log.info("$it : ${currentBids[it]}")
+//            bids.add(OrderBookEntry(currentBids[it]!!.size.toFloat(), currentBids[it]!!.price.toFloat()))
+//        }
+//        log.info("----------- ASKS ------------")
+//        currentAsks.keys.filter { currentAsks[it]!!.size.toDouble() > 0 }.take(10).forEach {
+//            log.info("$it : ${currentAsks[it]}")
+//            asks.add(OrderBookEntry(currentAsks[it]!!.size.toFloat(), currentAsks[it]!!.price.toFloat()))
+//        }
+//
+//        return OrderBook(0, symbol, bids, asks, Instant.now())
+//    }
 
     override suspend fun disconnect() {
         socket?.close()

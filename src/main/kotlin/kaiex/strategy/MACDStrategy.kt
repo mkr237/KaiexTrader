@@ -1,26 +1,42 @@
 package kaiex.strategy
 
+import kaiex.core.format
 import kaiex.indicator.MACD
-import kaiex.model.*
+import kaiex.model.Candle
+import kaiex.model.Order
+import kaiex.model.Trade
+import kaiex.ui.DataPacket
+import kaiex.ui.UIServer
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
+import org.koin.core.component.inject
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.math.BigDecimal
-import java.util.*
-import kotlin.collections.HashMap
-
-@Serializable
-data class TradeData(val time: Long, val price: Double, val size: Double, val macd: Double, val signal: Double)
+import java.time.Instant
+import kotlinx.serialization.encodeToString as myJsonEncode
 
 class MACDStrategy(val symbol: String,
                    val fastPeriod:Int = 12,
                    val slowPeriod:Int = 26,
-                   val signalPeriod:Int = 12): Strategy("MACDStrategy/$symbol/$fastPeriod/$slowPeriod/$signalPeriod") {
+                   val signalPeriod:Int = 9): Strategy("MACDStrategy/$symbol/$fastPeriod/$slowPeriod/$signalPeriod") {
+
+    @Serializable
+    private data class Update(val timestamp:Long,
+                              val open: Double,
+                              val high: Double,
+                              val low: Double,
+                              val close: Double,
+                              val totalVolume: Double,
+                              val numTrades: Int,
+                              val macd:Double,
+                              val signal:Double,
+                              val histgram:Double)
 
     private val log: Logger = LoggerFactory.getLogger(strategyId)
+    private val uiServer : UIServer by inject()
+
     private val macd = MACD(fastPeriod, slowPeriod, signalPeriod)
 
     private val positionSize = BigDecimal.valueOf(0.01)
@@ -37,89 +53,76 @@ class MACDStrategy(val symbol: String,
             }
 
             async {
-                marketDataManager.subscribeOrderBook(symbol).listenForEvents().collect { ob -> handleOrderBookUpdate(ob) }
+                marketDataManager.subscribeCandles(symbol).listenForEvents().collect { candle -> handleCandleEvent(candle) }
             }
+
+            uiServer.createSocket("/$strategyId")
         }
     }
 
     private fun handleTradeEvent(trade: Trade) {
-
         log.info("Received Trade: $trade")
+    }
+
+    private fun handleCandleEvent(candle: Candle) {
+        //log.info("Received Candle: $candle")
 
         // Update the MACD with the latest trade price
-        macd.update(trade.price.toDouble())
+        macd.update(candle.close.toDouble())
 
-        // Print the MACD values
+        //
         val macdLine = macd.getMACDLine()
         val signalLine = macd.getSignalLine()
         val histogram = macd.getHistogram()
-        log.info("MACD line: $macdLine, Signal line: $signalLine, Histogram: $histogram")
 
         //
         val newOrders = mutableListOf<Order>()
         if (macdLine > signalLine) {
             if(position.equals(BigDecimal.ZERO)) {
-                newOrders.add(createOrder(Side.BUY, trade.price, positionSize.toFloat()))
+                //newOrders.add(createOrder(Side.BUY, candle.close, positionSize.toFloat()))
                 position += positionSize
             } else if(position < BigDecimal.ZERO) {
-                newOrders.add(createOrder(Side.BUY, trade.price, positionSize2.toFloat()))
+                //newOrders.add(createOrder(Side.BUY, candle.close, positionSize2.toFloat()))
                 position += positionSize2
             }
         } else if (macdLine < signalLine) {
             if(position.equals(BigDecimal.ZERO)) {
-                newOrders.add(createOrder(Side.SELL, trade.price, positionSize.toFloat()))
+                //newOrders.add(createOrder(Side.SELL, candle.close, positionSize.toFloat()))
                 position -= positionSize
             } else if(position > BigDecimal.ZERO) {
-                newOrders.add(createOrder(Side.SELL, trade.price, positionSize2.toFloat()))
+                //newOrders.add(createOrder(Side.SELL, candle.close, positionSize2.toFloat()))
                 position -= positionSize2
             }
         }
 
         // update market data
-        md["price"] = trade.price.toDouble()
-        md["macd"] = macdLine
-        md["signal"] = signalLine
-        md["histogram"] = histogram
+        val update = Update(
+            candle.startTimestamp,
+            candle.open.toDouble(),
+            candle.high.toDouble(),
+            candle.low.toDouble(),
+            candle.close.toDouble(),
+            candle.volume.toDouble(),
+            candle.numTrades,
+            macdLine,
+            signalLine,
+            histogram)
 
-        // create and report a strategy snapshot
-        var snapshot = StrategyReport(strategyId)
-        snapshot.orders = ArrayList(newOrders)
-        snapshot.timeStamp = trade.createdAt.epochSecond
-        snapshot.marketData = HashMap(md)
-        reportManager.submitStrategyReport(snapshot)
+        log.info(update.toString())
+        uiServer.sendData("/$strategyId", DataPacket(0, format.myJsonEncode(update)))
     }
 
-    private fun handleOrderBookUpdate(ob: OrderBook) {
-        //log.info("Received Order Book: $ob")
-
-        val bestBid = ob.bids[0].price.toDouble()
-        val bestAsk = ob.asks[0].price.toDouble()
-        val midPrice = bestBid + ((bestAsk - bestBid) / 2)
-
-        // update market data
-        md["bestBid"] = bestBid
-        md["bestAsk"] = bestAsk
-        md["midPrice"] = midPrice
-
-        // create and report a strategy snapshot
-        var snapshot = StrategyReport(strategyId)
-        snapshot.orders = mutableListOf()
-        snapshot.timeStamp = ob.receivedAt.epochSecond      // TODO different to createdAt as per trades
-        snapshot.marketData = HashMap(md)
-        reportManager.submitStrategyReport(snapshot)
-    }
-
-    private fun createOrder(side: Side, price: Float, size: Float):Order {
-        log.info("Creating $side order ($size @ $price)")
-        return Order(
-            UUID.randomUUID().toString(),
-            "DYDX",
-            symbol,
-            Type.MARKET,
-            side,
-            price,
-            size,
-            OrderStatus.PENDING)
-    }
+//    private fun createOrder(side: Side, price: Float, size: Float):Order {
+//        log.info("Creating $side order ($size @ $price)")
+//        return Order(
+//            UUID.randomUUID().toString(),
+//            "DYDX",
+//            symbol,
+//            Type.MARKET,
+//            side,
+//            price,
+//            size,
+//            OrderStatus.PENDING)
+//    }
 }
 

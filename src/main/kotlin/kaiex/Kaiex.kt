@@ -1,6 +1,7 @@
 package kaiex
 
 import kaiex.strategy.MACDStrategy
+import kaiex.strategy.OrderBookWatcher
 import kaiex.ui.UIServer
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.coroutineScope
@@ -24,10 +25,13 @@ class Kaiex : KoinComponent {
             uiServer.start()
         }
 
+        delay(2000)     // TODO fix - must wait until UI server has started
+
         // TODO - if one fails, they all stop!
         log.info("Launching strategies")
         coroutineScope {
             launch { MACDStrategy("BTC-USD", 12, 26).start() }
+            //launch { OrderBookWatcher("BTC-USD").start() }
 //            launch { MACDStrategy("BTC-USD", 10, 16).start() }
 //            launch { MACDStrategy("ETH-USD", 12, 26).start() }
 //            launch { MACDStrategy("LINK-USD", 12, 26).start() }

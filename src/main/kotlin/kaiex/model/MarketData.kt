@@ -1,6 +1,7 @@
 package kaiex.model
 
 import kotlinx.coroutines.flow.Flow
+import kotlinx.serialization.Serializable
 import java.time.Instant
 
 enum class Side {
@@ -8,12 +9,14 @@ enum class Side {
     SELL
 }
 
+@Serializable
 data class Candle (                 // TODO do we want these to be var rather than val?
-    var startTimestamp: Instant,
+    var startTimestamp: Long,
     var open: Float,
     var high: Float,
     var low: Float,
     var close: Float,
+    var numTrades: Int,
     var volume: Float      // TODO Int?
 )
 
@@ -33,6 +36,7 @@ data class OrderBookEntry (
 )
 
 data class OrderBook (
+    val sequenceNumber:Int,
     val symbol:String,
     val bids:List<OrderBookEntry>,
     val asks:List<OrderBookEntry>,
