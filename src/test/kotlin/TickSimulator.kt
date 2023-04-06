@@ -12,7 +12,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString as myJsonEncode
 
 @Serializable
-data class Update(val timestamp: Long, val candle:Candle, val macd:Double, val signal: Double, val histogram: Double)
+data class Update(val timestamp: Long, val macd:Double, val signal: Double, val histogram: Double)
 
 suspend fun main() {
 
@@ -30,18 +30,29 @@ suspend fun main() {
         delay(2000)
         ui.createSocket(route)
 
+        delay(5000)
+
         async {
             println("Reading from file...")
-            TickPlayer("Binance BTCUSDT-trades-2023-04-04.csv", BinanceAdapter("BTCUSDT"), relativeTime = true).start()
+            var lastCandle: Long? = null
+            TickPlayer("Binance BTCUSDT-trades-2023-04-04.csv", BinanceAdapter("BTCUSDT"), relativeTime = false).start()
                 .toCandles().collect { candle ->
 
-                    macd.update(candle.close.toDouble())
-                    val macdLine = macd.getMACDLine()
-                    val signalLine = macd.getSignalLine()
-                    val histogram = macd.getHistogram()
-                    val update = Update(candle.startTimestamp, candle, macdLine, signalLine, histogram)
-                    println(update)
-                    ui.sendData(route, DataPacket(0, format.myJsonEncode(update)))
+                    if(candle.startTimestamp != lastCandle) {
+                        macd.update(candle.close.toDouble())
+                        val macdLine = macd.getMACDLine()
+                        val signalLine = macd.getSignalLine()
+                        val histogram = macd.getHistogram()
+                        val update = Update(candle.startTimestamp, macdLine, signalLine, histogram)
+                        println(update)
+                        ui.sendData(route, DataPacket(0, format.myJsonEncode(update)))
+                        lastCandle = candle.startTimestamp
+                    }
+
+                    println(candle)
+                    ui.sendData(route, DataPacket(0, format.myJsonEncode(candle)))
+
+                    delay(1)
             }
         }
     }
