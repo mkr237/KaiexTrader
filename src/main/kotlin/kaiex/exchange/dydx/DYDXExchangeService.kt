@@ -99,40 +99,38 @@ class DYDXExchangeService: KoinComponent, MarketDataService, OrderService, Accou
     /**
      * Account Service
      */
-    override suspend fun subscribeAccountUpdates(): Flow<AccountSnapshot> {
+    override suspend fun subscribeAccountUpdates(accountId: String): Flow<AccountUpdate> {
 
-        //val service : DYDXAccountStream by inject()
+        val service : DYDXAccountStream by inject()
 
-//        // connect to service
-//        log.info("Creating websocket for account updates")
-//        when(service.connect()) {
-//            is Resource.Success -> {
-//
-//                // subscribe to symbol
-//                log.info("Subscribing to account updates")
-//                return when (service.subscribe()) {
-//                    is Resource.Success -> {
-//
-//                        // observe updates
-//                        log.info("Listening for updates")
-//                        service.observeUpdates()
-//                    }
-//                    is Resource.Error -> {
-//                        log.error("Failed to subscribe")
-//                        flow {  }
-//                    }
-//                }
-//            }
-//            is Resource.Error -> {
-//                log.error("Failed to create websocket")
-//                return flow {  }
-//            }
-//        }
+        // connect to service
+        log.info("Creating websocket for account updates")
+        when(service.connect()) {
+            is Resource.Success -> {
 
-        return flow {}
+                // subscribe to symbol
+                log.info("Subscribing to account updates")
+                return when (service.subscribe()) {
+                    is Resource.Success -> {
+
+                        // observe updates
+                        log.info("Listening for account updates")
+                        service.observeUpdates()
+                    }
+                    is Resource.Error -> {
+                        log.error("Failed to subscribe to account updates")
+                        flow {  }
+                    }
+                }
+            }
+            is Resource.Error -> {
+                log.error("Failed to create websocket for account updates")
+                return flow {  }
+            }
+        }
     }
 
-    override suspend fun unsubscribeAccountUpdate(): Flow<AccountSnapshot> {
+    override suspend fun unsubscribeAccountUpdate(): Flow<AccountUpdate> {
         TODO("Not yet implemented")
     }
 }

@@ -24,7 +24,8 @@ data class Order(val orderId:String,
                  val side:Side,
                  val price: Float,
                  val size: Float,
-                 val status: OrderStatus)
+                 val status: OrderStatus,
+                 val createdAt: Long)
 
 @Serializable
 data class Position(val positionId:String,

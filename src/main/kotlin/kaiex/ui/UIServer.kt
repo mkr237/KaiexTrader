@@ -4,7 +4,6 @@ import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
-import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
@@ -21,13 +20,14 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.util.LinkedList
 import java.util.concurrent.CopyOnWriteArrayList
-import java.util.concurrent.CountDownLatch
 
 @Serializable
 data class DataPacket(val index: Int, val data: String)
 
-private const val updateTimeout = 1000L
-private const val heartbeatPeriod = 5000L
+private const val HEARTBEAT_PERIOD = 5000L
+private const val CHANNEL_SIZE = 1000  // TODO too big?
+private const val HISTORY_SIZE = CHANNEL_SIZE
+private const val SERVER_PORT = 8081
 
 class UIServer : KoinComponent {
 
@@ -42,17 +42,8 @@ class UIServer : KoinComponent {
 
     fun start() {
         log.info("Starting...")
-        server = embeddedServer(Netty, 8081) {
+        server = embeddedServer(Netty, SERVER_PORT) {
             install(WebSockets)
-        }
-
-        // Test
-        server!!.application.routing {
-            route("/hello", HttpMethod.Get) {
-                handle {
-                    call.respondText("Hello")
-                }
-            }
         }
 
         server!!.start(wait = true)
@@ -62,9 +53,9 @@ class UIServer : KoinComponent {
 
         //
         if(inputQueues.containsKey(routeId))
-            throw RuntimeException("Channel exists")
+            throw RuntimeException("Channel exists")  // TODO do something better
 
-        inputQueues[routeId] = Channel(capacity = 1000)     // TODO too big?
+        inputQueues[routeId] = Channel(capacity = CHANNEL_SIZE)
 
         log.info("Creating web socket with route: $routeId")
         val app = server?.application
@@ -89,7 +80,7 @@ class UIServer : KoinComponent {
                     while (isActive) {
                         log.debug("Sending heartbeat to client for route $routeId")
                         outgoing.send(Frame.Text("heartbeat"))
-                        delay(heartbeatPeriod)
+                        delay(HEARTBEAT_PERIOD)
                     }
                 }
 
@@ -97,7 +88,7 @@ class UIServer : KoinComponent {
                 try {
 
                     launch {
-                        withTimeoutOrNull(heartbeatPeriod) {
+                        withTimeoutOrNull(HEARTBEAT_PERIOD) {
                         incoming.receive() } ?: throw ClosedReceiveChannelException("Heartbeat failure")
                     }
 
@@ -107,7 +98,7 @@ class UIServer : KoinComponent {
                         //outgoing.send(Frame.Text(packet!!.data))
 
                         messageHistory.add(packet!!)
-                        if (messageHistory.size > 1000) {
+                        if (messageHistory.size > HISTORY_SIZE) {
                             messageHistory.removeFirst()
                         }
 

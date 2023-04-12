@@ -1,6 +1,6 @@
 import kaiex.core.format
 import kaiex.indicator.MACD
-import kaiex.model.Candle
+import kaiex.model.MACDUpdate
 import kaiex.ui.DataPacket
 import kaiex.ui.UIServer
 import kaiex.util.BinanceAdapter
@@ -10,9 +10,6 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString as myJsonEncode
-
-@Serializable
-data class Update(val timestamp: Long, val macd:Double, val signal: Double, val histogram: Double)
 
 suspend fun main() {
 
@@ -30,6 +27,7 @@ suspend fun main() {
         delay(2000)
         ui.createSocket(route)
 
+        // provide a chance to connect the browser
         delay(5000)
 
         async {
@@ -43,7 +41,7 @@ suspend fun main() {
                         val macdLine = macd.getMACDLine()
                         val signalLine = macd.getSignalLine()
                         val histogram = macd.getHistogram()
-                        val update = Update(candle.startTimestamp, macdLine, signalLine, histogram)
+                        val update = MACDUpdate(candle.startTimestamp, macdLine, signalLine, histogram)
                         println(update)
                         ui.sendData(route, DataPacket(0, format.myJsonEncode(update)))
                         lastCandle = candle.startTimestamp

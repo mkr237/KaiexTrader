@@ -20,6 +20,12 @@ data class Candle (                 // TODO do we want these to be var rather th
     var volume: Float      // TODO Int?
 )
 
+@Serializable
+data class MACDUpdate(val timestamp: Long,
+                      val macd:Double,
+                      val signal: Double,
+                      val histogram: Double)
+
 data class Trade (
     val symbol:String,
     val side:Side,

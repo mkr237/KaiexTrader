@@ -11,8 +11,6 @@ import io.ktor.client.plugins.websocket.*
 import io.ktor.client.request.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.websocket.*
-import kaiex.model.AccountInfo
-import kaiex.model.AccountSnapshot
 import kaiex.model.AccountUpdate
 import kaiex.util.Resource
 import kotlinx.coroutines.flow.*
@@ -24,7 +22,7 @@ import kotlinx.serialization.json.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
-class DYDXAccountStream(): DYDXSocket<AccountInfo> {
+class DYDXAccountStream(): DYDXSocket<AccountUpdate> {
 
     @Serializable(with = MessageSerializer::class)
     sealed class Message {
@@ -288,7 +286,7 @@ class DYDXAccountStream(): DYDXSocket<AccountInfo> {
         return try {
             val d = JsonObject(mapOf("type" to JsonPrimitive("subscribe"),
                                      "channel" to JsonPrimitive("v3_accounts"),
-                                     "accountNumber" to JsonPrimitive("0"),
+                                     "accountNumber" to JsonPrimitive("0"),     // TODO pass in!
                                      "apiKey" to JsonPrimitive(DYDX_API_KEY),
                                      "signature" to JsonPrimitive(sig),
                                      "timestamp" to JsonPrimitive(nowISO),
@@ -302,18 +300,17 @@ class DYDXAccountStream(): DYDXSocket<AccountInfo> {
         }
     }
 
-    override fun observeUpdates(): Flow<AccountInfo> {
+    override fun observeUpdates(): Flow<AccountUpdate> {
         return try {
             socket?.incoming
                 ?.receiveAsFlow()
                 ?.filter { it is Frame.Text }
                 ?.transform {
                     val json = (it as? Frame.Text)?.readText() ?: ""
-                    log.debug("Received: " + gson.toJson(jp.parse(json)))
                     when(val dydxAccountUpdate = Json.decodeFromString<Message>(json)) {
                         is Connected -> onConnected(dydxAccountUpdate)
-                        is Subscribed -> onSubscribed(dydxAccountUpdate)
-                        is ChannelData -> onChannelData(dydxAccountUpdate)
+                        is Subscribed -> emit(onSubscribed(dydxAccountUpdate))
+                        is ChannelData -> emit(onChannelData(dydxAccountUpdate))
                     }
                 }
                 ?: flow { }
@@ -327,9 +324,9 @@ class DYDXAccountStream(): DYDXSocket<AccountInfo> {
         log.info("Connected with connection_id: ${message.connection_id}")
     }
 
-    private fun onSubscribed(message: Subscribed): AccountSnapshot {
+    private fun onSubscribed(message: Subscribed): AccountUpdate {
         log.info("Subscribed with id ${message.id}")
-        return AccountSnapshot(message.contents.account.id)
+        return AccountUpdate(message.contents.account.id)
     }
 
     private fun onChannelData(message: ChannelData): AccountUpdate {

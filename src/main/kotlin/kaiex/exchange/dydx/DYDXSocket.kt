@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.Flow
 
 interface DYDXSocket<T> {
     companion object {
+        //const val BASE_URL = "wss://api.dydx.exchange/v3"
         const val BASE_URL = "wss://api.stage.dydx.exchange/v3"
     }
 

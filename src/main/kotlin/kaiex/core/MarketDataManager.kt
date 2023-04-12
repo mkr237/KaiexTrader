@@ -22,10 +22,7 @@ class MarketDataManager : KoinComponent {
 
     // TODO maintain a refCount to allow unsubscribes
     private val tradeBroadcasters:MutableMap<String, EventBroadcaster<Trade>> = mutableMapOf()
-    private val candleBroadcasters:MutableMap<String, EventBroadcaster<Candle>> = mutableMapOf()
     private val orderBookBroadcasters:MutableMap<String, EventBroadcaster<OrderBook>> = mutableMapOf()
-
-    //private val candleManagers:MutableMap<String, CandleManager> = mutableMapOf()
 
     suspend fun subscribeTrades(symbol: String): EventBroadcaster<Trade> {
         if(!tradeBroadcasters.containsKey(symbol)) {
@@ -44,37 +41,6 @@ class MarketDataManager : KoinComponent {
     }
 
     fun unsubscribeTrades(symbol: String) {
-        // TODO Not Implemented
-    }
-
-    suspend fun subscribeCandles(symbol: String): EventBroadcaster<Candle> {
-        if(!candleBroadcasters.containsKey(symbol)) {
-            log.info("Subscribing to candles for $symbol")
-            candleBroadcasters[symbol] = EventBroadcaster()
-            //candleManagers[symbol] = CandleManager()
-
-            CoroutineScope(Dispatchers.Default).launch {
-                subscribeTrades(symbol).listenForEvents().toCandles().collect { candle ->
-                    candleBroadcasters[symbol]?.sendEvent(candle)
-
-                    //candleManagers[symbol]?.addTrade(trade)
-                }
-            }
-
-//            CoroutineScope(Dispatchers.Default).launch {
-//                candleManagers[symbol]!!.subscribeCandles().collect { candle: Candle ->
-//                    candleBroadcasters[symbol]?.sendEvent(candle)
-//                }
-//            }
-
-        } else {
-            log.info("Candle subscription exists for $symbol")
-        }
-
-        return candleBroadcasters[symbol] ?: throw RuntimeException("Unknown Symbol: $symbol")
-    }
-
-    fun unsubscribeCandles(symbol: String) {
         // TODO Not Implemented
     }
 
