@@ -1,132 +1,140 @@
 package kaiex.ui
 
-import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
-import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
 import io.ktor.websocket.*
+import kaiex.core.format
+import kaiex.strategy.StrategyChartConfig
+import kaiex.strategy.StrategyMarketDataUpdate
+import kaiex.strategy.StrategySnapshot
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeoutOrNull
-import kotlinx.serialization.Serializable
 import org.koin.core.component.KoinComponent
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.util.LinkedList
-import java.util.concurrent.CopyOnWriteArrayList
+import java.util.*
+import java.util.concurrent.ConcurrentHashMap
+import kotlinx.serialization.encodeToString as myJsonEncode
 
-@Serializable
-data class DataPacket(val index: Int, val data: String)
-
-private const val HEARTBEAT_PERIOD = 5000L
 private const val CHANNEL_SIZE = 1000  // TODO too big?
 private const val HISTORY_SIZE = CHANNEL_SIZE
 private const val SERVER_PORT = 8081
 
 class UIServer : KoinComponent {
 
-    private val log: Logger = LoggerFactory.getLogger(javaClass.simpleName)
-    private var server:NettyApplicationEngine? = null
+    private val simpleName = javaClass.simpleName
+    private val log: Logger = LoggerFactory.getLogger(simpleName)
 
-    private var inputQueues: MutableMap<String, Channel<DataPacket>> = mutableMapOf()
-    private val sessions = CopyOnWriteArrayList<WebSocketSession>()
+    private var inputQueue: Channel<Message> = Channel(capacity = CHANNEL_SIZE)
+    private val messageHistory = LinkedList<Message>()
+    private var sessionNumber = 0
+    private var sequenceNumber = 0L
 
-    // TODO - needs to be per route
-    private val messageHistory = LinkedList<DataPacket>()
+    private var strategies = mutableMapOf<String, StrategyChartConfig>()
 
     fun start() {
         log.info("Starting...")
-        server = embeddedServer(Netty, SERVER_PORT) {
+
+        val server = embeddedServer(Netty, port = SERVER_PORT) {
             install(WebSockets)
-        }
 
-        server!!.start(wait = true)
-    }
+            val sessions = ConcurrentHashMap<String, WebSocketSession>()
 
-    fun createSocket(routeId: String) {
+            routing {
+                webSocket("/strategy") {
 
-        //
-        if(inputQueues.containsKey(routeId))
-            throw RuntimeException("Channel exists")  // TODO do something better
+                    val sessionId = "Session-${++sessionNumber}"
+                    val sessionLog: Logger = LoggerFactory.getLogger("$simpleName:$sessionId")
+                    sessionLog.info("Creating session: $sessionId")
+                    sessions[sessionId] = this
 
-        inputQueues[routeId] = Channel(capacity = CHANNEL_SIZE)
+                    try {
 
-        log.info("Creating web socket with route: $routeId")
-        val app = server?.application
-
-        app?.routing {
-            webSocket(routeId) {
-
-                log.info("Received connection for route: $routeId")
-
-                // store session
-                sessions += this
-
-                // Send message history to new session
-                log.info("Sending history of ${messageHistory.size}")
-                messageHistory.forEach { packet ->
-                    log.info("Sending $packet")
-                    send(Frame.Text(packet.data))
-                }
-
-                // set up heartbeat job
-                val heartbeatJob = launch {
-                    while (isActive) {
-                        log.debug("Sending heartbeat to client for route $routeId")
-                        outgoing.send(Frame.Text("heartbeat"))
-                        delay(HEARTBEAT_PERIOD)
-                    }
-                }
-
-                // send outgoing messages
-                try {
-
-                    launch {
-                        withTimeoutOrNull(HEARTBEAT_PERIOD) {
-                        incoming.receive() } ?: throw ClosedReceiveChannelException("Heartbeat failure")
-                    }
-
-                    while (isActive) {
-                        val packet = inputQueues[routeId]?.receive()
-
-                        //outgoing.send(Frame.Text(packet!!.data))
-
-                        messageHistory.add(packet!!)
-                        if (messageHistory.size > HISTORY_SIZE) {
-                            messageHistory.removeFirst()
+                        // send strategy descriptors to client
+                        sessionLog.info("Sending ${strategies.size} strategy descriptors to $sessionId")
+                        strategies.values.forEach { config ->
+                            val message = StrategyDescriptorMessage(++sequenceNumber, "kaiex.ui.StrategyChartConfigMessage", config)
+                            send(Frame.Text(format.myJsonEncode(message)))
                         }
 
-                            //log.info("Sending to ${sessions.size} sessions: $packet")
-                        sessions.forEach {
-                            it.send(Frame.Text(packet.data))
+                        // Send message history to new session
+                        sessionLog.info("Sending history of ${messageHistory.size} to $sessionId")
+                        messageHistory.forEach { message ->
+                            sessionLog.info("Sending $message to $sessionId")
+                            send(Frame.Text(format.myJsonEncode(message)))
+                        }
+
+                        while (true) {
+                            when (val frame = incoming.receive()) {
+                                is Frame.Text -> {
+                                    val text = frame.readText()
+                                    sessionLog.info("Received message from $sessionId: $text")
+                                    sessions.values.forEach { session ->
+                                        if (session != this) {
+                                            session.send(text)
+                                        }
+                                    }
+                                }
+                                is Frame.Close -> {
+                                    sessionLog.info("Socket Closed")
+                                }
+                                else -> {
+                                    sessionLog.error("Received unknown message")
+                                }
+                            }
+                        }
+                    } catch (e: ClosedReceiveChannelException) {
+                        sessionLog.error("Session $sessionId closed: ${e.message}")
+                    } catch (e: Throwable) {
+                        sessionLog.error("Error occurred in Session $sessionId: ${e.message}")
+                    } finally {
+                        sessions.remove(sessionId)
+                        sessionLog.info("Session $sessionId closed")
+                    }
+                }
+            }
+
+            launch {
+                while (true) {
+                    val message = inputQueue.receive()
+
+                    messageHistory.add(message!!)
+                    if (messageHistory.size > HISTORY_SIZE) {
+                        messageHistory.removeFirst()
+                    }
+
+                    sessions.forEach { (key, session) ->
+                        try {
+                            session.send(Frame.Text(format.myJsonEncode(message)))
+                        } catch (e: Throwable) {
+                            log.info("Error occurred while sending message to $key: ${e.message}")
+                            session.close(CloseReason(CloseReason.Codes.UNEXPECTED_CONDITION, "Failed to send message"))
                         }
                     }
-
-                } catch (e: Exception) {
-                    if (e is ClosedReceiveChannelException) {
-                        log.info("Client disconnected for route $routeId")
-                        outgoing.close()
-                    } else {
-                        log.error("Socket connection failed for route $routeId: $e")
-                    }
-
-                } finally {
-                    sessions -= this
-                    heartbeatJob.cancel()
                 }
             }
         }
+
+        server.start(wait = true)
     }
 
-    fun sendData(routeId: String, packet: DataPacket) {
-        log.debug("Received: $packet")
-        if(inputQueues.containsKey(routeId))
-            inputQueues[routeId]?.trySend(packet)
+    fun register(config: StrategyChartConfig) {
+        log.debug("Registering strategy: $config")
+        strategies[config.strategyId] = config
+    }
+
+    fun send(update: StrategySnapshot) {
+        log.debug("Received: $update")
+        inputQueue.trySend(StrategySnapshotMessage(++sequenceNumber, update))
+    }
+
+    fun send(update: StrategyMarketDataUpdate) {
+        log.debug("Received: $update")
+        inputQueue.trySend(StrategyMarketDataUpdateMessage(++sequenceNumber, update))
     }
 }

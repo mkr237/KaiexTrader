@@ -8,7 +8,7 @@ import io.ktor.client.plugins.websocket.*
 import io.ktor.client.request.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.websocket.*
-import kaiex.model.Side
+import kaiex.model.OrderSide
 import kaiex.model.Trade
 import kaiex.util.Resource
 import kotlinx.coroutines.flow.*
@@ -171,7 +171,7 @@ class DYDXTradeStream(private val symbol:String): DYDXSocket<Trade> {
         var trades = ArrayList<kaiex.model.Trade>()
         tradesIn.reversed().forEach { trade ->
             trades.add(Trade(symbol,
-                Side.valueOf(trade.side),
+                OrderSide.valueOf(trade.side),
                 trade.size.toFloat(),
                 trade.price.toFloat(),
                 Instant.parse(trade.createdAt),

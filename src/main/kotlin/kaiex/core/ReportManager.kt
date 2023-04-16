@@ -1,14 +1,12 @@
 package kaiex.core
 
 import kaiex.strategy.StrategyReport
-import kaiex.ui.DataPacket
 import kaiex.ui.UIServer
 import kotlinx.serialization.json.Json
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import kotlinx.serialization.encodeToString as myJsonEncode
 
 val format = Json { encodeDefaults = true }
 
@@ -31,7 +29,7 @@ class ReportManager : KoinComponent {
             strategies[snapshot.strategyId] = mutableListOf(snapshot)
 
             // create e UI socket
-            uiServer.createSocket("/${snapshot.strategyId}")
+            //uiServer.createSocket("/${snapshot.strategyId}")
 
         } else {
 
@@ -40,6 +38,6 @@ class ReportManager : KoinComponent {
             strategies[snapshot.strategyId]!!.add(snapshot)
         }
 
-        uiServer.sendData("/${snapshot.strategyId}", DataPacket(index++, format.myJsonEncode(snapshot)))
+        //uiServer.sendData("/${snapshot.strategyId}", DataPacket(index++, format.myJsonEncode(snapshot)))
     }
 }

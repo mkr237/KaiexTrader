@@ -92,7 +92,7 @@ class DYDXExchangeService: KoinComponent, MarketDataService, OrderService, Accou
     /**
      * Order Service
      */
-    override fun createOrder(symbol: String, type: Type, side: Side, price: Float, size: Float) {
+    override fun createOrder(symbol: String, type: OrderType, side: OrderSide, price: Float, size: Float) {
         TODO("Not yet implemented")
     }
 

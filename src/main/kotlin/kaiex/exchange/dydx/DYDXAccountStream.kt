@@ -11,7 +11,8 @@ import io.ktor.client.plugins.websocket.*
 import io.ktor.client.request.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.websocket.*
-import kaiex.model.AccountUpdate
+import kaiex.Kaiex
+import kaiex.model.*
 import kaiex.util.Resource
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.isActive
@@ -21,6 +22,7 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.time.Instant
 
 class DYDXAccountStream(): DYDXSocket<AccountUpdate> {
 
@@ -195,7 +197,7 @@ class DYDXAccountStream(): DYDXSocket<AccountUpdate> {
         val size: String,
         val maxSize: String,
         val entryPrice: String,
-        val exitPrice: String?,
+        val exitPrice: String? = null,
         val openTransactionId: String,
         val closeTransactionId: String? = null,
         val lastTransactionId: String,
@@ -205,6 +207,7 @@ class DYDXAccountStream(): DYDXSocket<AccountUpdate> {
         val sumOpen: String,
         val sumClose: String,
         val netFunding: String,
+        val unrealisedPnl: String? = null,
         val realizedPnl: String
     )
 
@@ -326,15 +329,71 @@ class DYDXAccountStream(): DYDXSocket<AccountUpdate> {
 
     private fun onSubscribed(message: Subscribed): AccountUpdate {
         log.info("Subscribed with id ${message.id}")
-        return AccountUpdate(message.contents.account.id)
+        return AccountUpdate(
+            message.id,
+            convertOrders(message.contents.orders),
+            emptyList(),
+            emptyList()
+        )
     }
 
     private fun onChannelData(message: ChannelData): AccountUpdate {
         log.info("Received channel data")
-        return AccountUpdate(message.id)
+        return AccountUpdate(
+            message.id,
+            convertOrders(message.contents.orders),
+            convertFills(message.contents.fills),
+            convertPositions(message.contents.positions))
     }
 
     override suspend fun disconnect() {
         TODO("Not yet implemented")
     }
+
+    private fun convertOrders(orders:List<DYDXAccountStream.Order>?) = orders?.map { order ->
+            OrderUpdate(
+                order.clientId,
+                order.id,
+                order.accountId,
+                order.market,
+                OrderType.valueOf(order.type),
+                OrderSide.valueOf(order.side),
+                order.price.toFloat(),
+                order.size.toFloat(),
+                order.remainingSize.toFloat(),
+                OrderStatus.valueOf(order.status),
+                OrderTimeInForce.valueOf(order.timeInForce),
+                Instant.parse(order.createdAt).epochSecond,
+                Instant.parse(order.expiresAt).epochSecond
+            )
+        }?: emptyList()
+
+    private fun convertFills(fills:List<DYDXAccountStream.Fill>?) = fills?.map { fill ->
+        OrderFill(
+            fill.id,
+            fill.orderId,
+            fill.market,
+            OrderType.valueOf(fill.type),
+            OrderSide.valueOf(fill.side),
+            fill.price.toFloat(),
+            fill.size.toFloat(),
+            fill.fee.toFloat(),
+            Instant.parse(fill.createdAt).epochSecond,
+            Instant.parse(fill.updatedAt).epochSecond
+        )
+    }?: emptyList()
+
+    private fun convertPositions(positions:List<DYDXAccountStream.Position>?) = positions?.map { position ->
+        Position(
+            position.id,
+            position.market,
+            PositionSide.valueOf(position.side),
+            position.entryPrice.toFloat(),
+            position.exitPrice?.toFloat() ?: 0f,
+            position.size.toFloat(),
+            position.unrealisedPnl?.toFloat() ?: 0f,
+            Instant.parse(position.createdAt).epochSecond,
+            position.closedAt?.let { Instant.parse(it).epochSecond } ?: 0
+        )
+    }?: emptyList()
 }

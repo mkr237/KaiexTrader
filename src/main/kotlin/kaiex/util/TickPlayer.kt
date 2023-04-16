@@ -1,6 +1,6 @@
 package kaiex.util
 
-import kaiex.model.Side
+import kaiex.model.OrderSide
 import kaiex.model.Trade
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -32,7 +32,7 @@ class HistDataAdapter(val symbol: String) : TickAdapter {
         val askPrice = fields[2].toFloat()
         return Trade(
             symbol = symbol,
-            side = if (Random.nextBoolean()) Side.BUY else Side.SELL,
+            side = if (Random.nextBoolean()) OrderSide.BUY else OrderSide.SELL,
             size = Random.nextFloat() * 1000,
             price = (bidPrice * 20000f),
             createdAt = LocalDateTime.parse(timestampStr, formatter).atZone(ZoneId.systemDefault()).toInstant(),
@@ -56,7 +56,7 @@ class BinanceAdapter(val symbol: String) : TickAdapter {
 
         return Trade(
             symbol = symbol,
-            side = if (Random.nextBoolean()) Side.BUY else Side.SELL,
+            side = if (Random.nextBoolean()) OrderSide.BUY else OrderSide.SELL,
             size = size,
             price = price,
             createdAt = Instant.ofEpochMilli(timestamp.toLong()).truncatedTo(ChronoUnit.SECONDS),

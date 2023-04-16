@@ -20,7 +20,7 @@ class AccountManager : KoinComponent {
 
     suspend fun subscribeAccountUpdates(accountId: String): EventBroadcaster<AccountUpdate> {
         if(!accountBroadcasters.containsKey(accountId)) {
-            log.info("Subscribing to account updates for $accountId")
+            log.info("Subscribing to account updates for account:$accountId")
             accountBroadcasters[accountId] = EventBroadcaster()
             CoroutineScope(Dispatchers.Default).launch {
                 dydxExchangeService.subscribeAccountUpdates((accountId)).collect { update:AccountUpdate ->

@@ -1,40 +1,18 @@
 package kaiex.strategy
 
-import kaiex.core.format
 import kaiex.indicator.MACD
 import kaiex.model.*
-import kaiex.ui.DataPacket
-import kaiex.ui.UIServer
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
-import kotlinx.serialization.Serializable
-import org.koin.core.component.inject
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import toCandles
 import java.math.BigDecimal
 import java.util.*
-import kotlinx.serialization.encodeToString as myJsonEncode
 
 class MACDStrategy(val symbol: String,
                    val fastPeriod:Int = 12,
                    val slowPeriod:Int = 26,
                    val signalPeriod:Int = 9): Strategy("MACDStrategy/$symbol/$fastPeriod/$slowPeriod/$signalPeriod") {
 
-    @Serializable
-    private data class Update(val timestamp:Long,
-                              val open: Double,
-                              val high: Double,
-                              val low: Double,
-                              val close: Double,
-                              val totalVolume: Double,
-                              val numTrades: Int,
-                              val macd:Double,
-                              val signal:Double,
-                              val histgram:Double)
-
     private val log: Logger = LoggerFactory.getLogger(strategyId)
-    private val uiServer : UIServer by inject()
 
     private val macd = MACD(fastPeriod, slowPeriod, signalPeriod)
 
@@ -42,82 +20,121 @@ class MACDStrategy(val symbol: String,
     private val positionSize2 = BigDecimal.valueOf(0.02)
     private var position = BigDecimal.ZERO
     private var lastCandle: Long? = null
+    override val config = StrategyChartConfig(
+        strategyId = "MACDStrategy/BTC-USD/12/26/9",
+        chartConfig = listOf(
+            ChartSeriesConfig(
+                id = "price",
+                seriesType = "candle",
+                pane = 0,
+                color = "#00FF00"
+            ),
+            ChartSeriesConfig(
+                id = "histogram",
+                seriesType = "histogram",
+                pane = 1,
+                color = "#26a69a"
+            ),
+            ChartSeriesConfig(
+                id = "macd",
+                seriesType = "line",
+                pane = 1,
+                color = "#2196F3"
+            ),
+            ChartSeriesConfig(
+                id = "signal",
+                seriesType = "line",
+                pane = 1,
+                color = "#FC6C02"
+            )
+        )
+    )
 
-    suspend fun start() {
+    override suspend fun onStart() {
+        log.info("onStart()")
 
-        coroutineScope {
-//            async {
-//                marketDataManager.subscribeTrades(symbol).listenForEvents().toCandles().collect { candle -> handleCandleEvent(candle) }
-//            }
+        subscribeCandles(symbol) { candle -> handleCandleEvent(candle) }
+    }
 
-            async {
-                accountManager.subscribeAccountUpdates("0").listenForEvents().collect { update -> handleAccountUpdate(update) }
-            }
+    override suspend fun onUpdate() {
+        log.info("onUpdate()")
+    }
 
-            uiServer.createSocket("/$strategyId")
-        }
+    override suspend fun onStop() {
+        log.info("onStop()")
     }
 
     private fun handleCandleEvent(candle: Candle) {
         log.info("Received Candle: $candle")
-
-        val routeId = "/$strategyId"
 
         if(candle.startTimestamp != lastCandle) {
             macd.update(candle.close.toDouble())
             val macdLine = macd.getMACDLine()
             val signalLine = macd.getSignalLine()
             val histogram = macd.getHistogram()
-            val update = MACDUpdate(candle.startTimestamp, macdLine, signalLine, histogram)
-            println(update)
 
-            var order:Order? = null
+            var order:CreateOrder? = null
             if (macdLine > signalLine) {
                 if(position.equals(BigDecimal.ZERO)) {
-                    order = createOrder(candle.startTimestamp, Side.BUY, candle.close, positionSize.toFloat())
+                    order = createOrder(candle.startTimestamp, OrderSide.BUY, candle.close, positionSize.toFloat())
                     position += positionSize
                 } else if(position < BigDecimal.ZERO) {
-                    order = createOrder(candle.startTimestamp, Side.BUY, candle.close, positionSize2.toFloat())
+                    order = createOrder(candle.startTimestamp, OrderSide.BUY, candle.close, positionSize2.toFloat())
                     position += positionSize2
                 }
             } else if (macdLine < signalLine) {
                 if(position.equals(BigDecimal.ZERO)) {
-                    order = createOrder(candle.startTimestamp, Side.SELL, candle.close, positionSize.toFloat())
+                    order = createOrder(candle.startTimestamp, OrderSide.SELL, candle.close, positionSize.toFloat())
                     position -= positionSize
                 } else if(position > BigDecimal.ZERO) {
-                    order = createOrder(candle.startTimestamp, Side.SELL, candle.close, positionSize2.toFloat())
+                    order = createOrder(candle.startTimestamp, OrderSide.SELL, candle.close, positionSize2.toFloat())
                     position -= positionSize2
                 }
             }
 
-            if(order != null) {
-                uiServer.sendData(routeId, DataPacket(0, format.myJsonEncode(order)))
-                log.info("Placing Order: $order")
-            }
+            val updates = listOf(
+                SeriesUpdate.NumericUpdate(
+                    id = "macd",
+                    value = macdLine
+                ),
+                SeriesUpdate.NumericUpdate(
+                    id = "signal",
+                    value = signalLine
+                ),
+                SeriesUpdate.NumericUpdate(
+                    id = "histogram",
+                    value = histogram
+                )
+            )
 
-            uiServer.sendData(routeId, DataPacket(0, format.myJsonEncode(update)))
+            uiServer.send(StrategyMarketDataUpdate(strategyId, candle.lastUpdate, updates))
             lastCandle = candle.startTimestamp
         }
 
-        println(candle)
-        uiServer.sendData(routeId, DataPacket(0, format.myJsonEncode(candle)))
+        val updates = listOf(
+            SeriesUpdate.CandleUpdate(
+                id = "price",
+                open = candle.open.toDouble(),
+                high = candle.high.toDouble(),
+                low = candle.low.toDouble(),
+                close = candle.close.toDouble()
+            )
+        )
+        uiServer.send(StrategyMarketDataUpdate(strategyId, candle.startTimestamp, updates))
     }
 
-    private fun createOrder(time: Long, side: Side, price: Float, size: Float):Order {
+    private fun createOrder(time: Long, side: OrderSide, price: Float, size: Float):CreateOrder {
         log.info("Creating $side order ($size @ $price)")
-        return Order(
+        return CreateOrder(
             UUID.randomUUID().toString(),
             "DYDX",
             symbol,
-            Type.MARKET,
+            OrderType.MARKET,
             side,
             price,
             size,
-            OrderStatus.PENDING,
+            OrderTimeInForce.GTT,
+            false,
             time)
-    }
-
-    private fun handleAccountUpdate(update: AccountUpdate) {
-        log.info("Received Account Update: $update")
     }
 }

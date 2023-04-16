@@ -4,31 +4,21 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.Serializable
 import java.time.Instant
 
-enum class Side {
-    BUY,
-    SELL
-}
-
 @Serializable
-data class Candle (                 // TODO do we want these to be var rather than val?
-    var startTimestamp: Long,
-    var open: Float,
-    var high: Float,
-    var low: Float,
-    var close: Float,
-    var numTrades: Int,
-    var volume: Float      // TODO Int?
+data class Candle (
+    val startTimestamp: Long,
+    val lastUpdate: Long,
+    val open: Float,
+    val high: Float,
+    val low: Float,
+    val close: Float,
+    val numTrades: Int,
+    val volume: Float
 )
-
-@Serializable
-data class MACDUpdate(val timestamp: Long,
-                      val macd:Double,
-                      val signal: Double,
-                      val histogram: Double)
 
 data class Trade (
     val symbol:String,
-    val side:Side,
+    val side:OrderSide,
     val size:Float,
     val price:Float,
     val createdAt:Instant,

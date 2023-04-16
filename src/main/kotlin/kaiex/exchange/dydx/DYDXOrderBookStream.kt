@@ -8,7 +8,6 @@ import io.ktor.client.plugins.websocket.*
 import io.ktor.client.request.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.websocket.*
-import kaiex.model.Order
 import kaiex.model.OrderBook
 import kaiex.model.OrderBookEntry
 import kaiex.util.Resource
@@ -19,7 +18,6 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.*
 import org.slf4j.LoggerFactory
-import java.time.Duration
 import java.time.Instant
 import java.util.SortedMap
 import java.util.TreeMap
