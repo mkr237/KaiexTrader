@@ -1,8 +1,11 @@
 package kaiex.ui
 
+import io.ktor.http.*
+import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
+import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
 import io.ktor.websocket.*
@@ -19,6 +22,9 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+import io.ktor.server.plugins.contentnegotiation.*
+import io.ktor.server.plugins.cors.routing.*
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.encodeToString as myJsonEncode
 
 private const val CHANNEL_SIZE = 1000  // TODO too big?
@@ -42,25 +48,34 @@ class UIServer : KoinComponent {
 
         val server = embeddedServer(Netty, port = SERVER_PORT) {
             install(WebSockets)
+            install(ContentNegotiation) {
+                json(Json {
+                    prettyPrint = true
+                    isLenient = true
+                    ignoreUnknownKeys = true
+                })
+            }
+            install(CORS) {
+                anyHost()
+            }
 
             val sessions = ConcurrentHashMap<String, WebSocketSession>()
 
             routing {
-                webSocket("/strategy") {
 
+                get("/strategies") {
+                    val strategyList = strategies.values.toList()
+                    call.respond(strategyList)
+                }
+
+                webSocket("/{strategyId}") {
+                    val strategyId = call.parameters["strategyId"] ?: return@webSocket
                     val sessionId = "Session-${++sessionNumber}"
                     val sessionLog: Logger = LoggerFactory.getLogger("$simpleName:$sessionId")
-                    sessionLog.info("Creating session: $sessionId")
+                    sessionLog.info("Creating session: $sessionId for strategyId: $strategyId")
                     sessions[sessionId] = this
 
                     try {
-
-                        // send strategy descriptors to client
-                        sessionLog.info("Sending ${strategies.size} strategy descriptors to $sessionId")
-                        strategies.values.forEach { config ->
-                            val message = StrategyDescriptorMessage(++sequenceNumber, "kaiex.ui.StrategyChartConfigMessage", config)
-                            send(Frame.Text(format.myJsonEncode(message)))
-                        }
 
                         // Send message history to new session
                         sessionLog.info("Sending history of ${messageHistory.size} to $sessionId")

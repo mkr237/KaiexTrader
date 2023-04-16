@@ -84,6 +84,8 @@ abstract class Strategy(val strategyId: String) : KoinComponent {
 @Serializable
 data class StrategyChartConfig(
     val strategyId: String,
+    val strategyName: String,
+    val strategyDescription: String,
     val chartConfig: List<ChartSeriesConfig>
 )
 

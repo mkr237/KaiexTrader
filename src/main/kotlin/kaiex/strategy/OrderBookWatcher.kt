@@ -10,11 +10,14 @@ import org.koin.core.component.inject
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.time.Instant
+import java.util.*
 
-class OrderBookWatcher(val symbol: String): Strategy("OrderBookWatcher/$symbol") {
+class OrderBookWatcher(val symbol: String): Strategy("OrderBookWatcher:$symbol") {
     private val log: Logger = LoggerFactory.getLogger(strategyId)
     override val config = StrategyChartConfig(
-        strategyId = "MACDStrategy/BTC-USD/12/26/9",
+        strategyId = strategyId,
+        strategyName = javaClass.simpleName,
+        strategyDescription = "",
         chartConfig = listOf(
             ChartSeriesConfig(
                 id = "price",

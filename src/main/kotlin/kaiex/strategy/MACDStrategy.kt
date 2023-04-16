@@ -10,7 +10,7 @@ import java.util.*
 class MACDStrategy(val symbol: String,
                    val fastPeriod:Int = 12,
                    val slowPeriod:Int = 26,
-                   val signalPeriod:Int = 9): Strategy("MACDStrategy/$symbol/$fastPeriod/$slowPeriod/$signalPeriod") {
+                   val signalPeriod:Int = 9): Strategy("MACDStrategy:$symbol,$fastPeriod,$slowPeriod,$signalPeriod") {
 
     private val log: Logger = LoggerFactory.getLogger(strategyId)
 
@@ -21,7 +21,9 @@ class MACDStrategy(val symbol: String,
     private var position = BigDecimal.ZERO
     private var lastCandle: Long? = null
     override val config = StrategyChartConfig(
-        strategyId = "MACDStrategy/BTC-USD/12/26/9",
+        strategyId = strategyId,
+        strategyName = javaClass.simpleName,
+        strategyDescription = "",
         chartConfig = listOf(
             ChartSeriesConfig(
                 id = "price",
