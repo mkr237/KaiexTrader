@@ -1,10 +1,7 @@
 package kaiex
 
 import kaiex.core.*
-import kaiex.exchange.dydx.DYDXAccountStream
-import kaiex.exchange.dydx.DYDXExchangeService
-import kaiex.exchange.dydx.DYDXOrderBookStream
-import kaiex.exchange.dydx.DYDXTradeStream
+import kaiex.exchange.dydx.*
 import kaiex.ui.UIServer
 import org.koin.dsl.module
 
@@ -20,9 +17,9 @@ val core = module {
 
 val dydxExchangeService = module {
     single { DYDXExchangeService() }
-    factory { DYDXAccountStream() }
-    factory { params -> DYDXTradeStream(symbol = params.get()) }
-    factory { params -> DYDXOrderBookStream(symbol = params.get()) }
-
+    factory { DYDXAccountSocket() }
+    factory { params -> DYDXTradeSocket(symbol = params.get()) }
+    factory { params -> DYDXOrderBookSocket(symbol = params.get()) }
+    factory { DYDXOrderEndpoint() }
     // props can used with getProperty("my_property")
 }

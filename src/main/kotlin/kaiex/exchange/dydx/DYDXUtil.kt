@@ -1,17 +1,26 @@
 package kaiex.exchange.dydx
 
+import com.fersoft.signature.Signature
 import kaiex.util.UUID5
-import kotlinx.serialization.encodeToString as myJsonEncode
 import kotlinx.serialization.json.Json
 import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.util.*
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
+import kotlinx.serialization.encodeToString as myJsonEncode
 
 
 // for UUID5
 val NAMESPACE: UUID = UUID.fromString("0f9da948-a6fb-4c45-9edc-4685c3f3317d")
+
+//fun convert(sig: StarknetCurveSignature): String {
+//    return String.format("%1$64s%2$64s", sig.r.value.toString(16), sig.s.value.toString(16)).replace(" ", "0")
+//}
+
+fun deriveFinalSignature(sig: Signature): String {
+    return String.format("%1$64s%2$64s", sig.r.toString(16), sig.s.toString(16)).replace(" ", "0")
+}
 
 fun sign(
     requestPath: String,

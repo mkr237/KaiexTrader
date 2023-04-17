@@ -11,7 +11,6 @@ import io.ktor.client.plugins.websocket.*
 import io.ktor.client.request.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.websocket.*
-import kaiex.Kaiex
 import kaiex.model.*
 import kaiex.util.Resource
 import kotlinx.coroutines.flow.*
@@ -24,7 +23,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.time.Instant
 
-class DYDXAccountStream(): DYDXSocket<AccountUpdate> {
+class DYDXAccountSocket(): DYDXSocket<AccountUpdate> {
 
     @Serializable(with = MessageSerializer::class)
     sealed class Message {
@@ -350,7 +349,7 @@ class DYDXAccountStream(): DYDXSocket<AccountUpdate> {
         TODO("Not yet implemented")
     }
 
-    private fun convertOrders(orders:List<DYDXAccountStream.Order>?) = orders?.map { order ->
+    private fun convertOrders(orders:List<DYDXAccountSocket.Order>?) = orders?.map { order ->
             OrderUpdate(
                 order.clientId,
                 order.id,
@@ -368,7 +367,7 @@ class DYDXAccountStream(): DYDXSocket<AccountUpdate> {
             )
         }?: emptyList()
 
-    private fun convertFills(fills:List<DYDXAccountStream.Fill>?) = fills?.map { fill ->
+    private fun convertFills(fills:List<DYDXAccountSocket.Fill>?) = fills?.map { fill ->
         OrderFill(
             fill.id,
             fill.orderId,
@@ -383,7 +382,7 @@ class DYDXAccountStream(): DYDXSocket<AccountUpdate> {
         )
     }?: emptyList()
 
-    private fun convertPositions(positions:List<DYDXAccountStream.Position>?) = positions?.map { position ->
+    private fun convertPositions(positions:List<DYDXAccountSocket.Position>?) = positions?.map { position ->
         Position(
             position.id,
             position.market,

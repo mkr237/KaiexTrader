@@ -25,7 +25,7 @@ import java.time.temporal.ChronoUnit
 /*
  *
  */
-class DYDXTradeStream(private val symbol:String): DYDXSocket<Trade> {
+class DYDXTradeSocket(private val symbol:String): DYDXSocket<Trade> {
 
     @Serializable(with = MessageSerializer::class)
     sealed class Message {

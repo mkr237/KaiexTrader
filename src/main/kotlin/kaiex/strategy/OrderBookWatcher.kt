@@ -1,16 +1,10 @@
 package kaiex.strategy
 
 import kaiex.model.OrderBook
-import kaiex.ui.UIServer
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.Serializable
-import org.koin.core.component.inject
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.time.Instant
-import java.util.*
 
 class OrderBookWatcher(val symbol: String): Strategy("OrderBookWatcher:$symbol") {
     private val log: Logger = LoggerFactory.getLogger(strategyId)

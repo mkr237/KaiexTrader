@@ -88,5 +88,5 @@ data class Position(val positionId:String,
                     val closedAt:Long)
 
 interface OrderService {
-    fun createOrder(symbol: String, type:OrderType, side:OrderSide, price: Float, size: Float)
+    suspend fun createOrder(symbol: String, type: OrderType, side:OrderSide, price: Float, size: Float)
 }

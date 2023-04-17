@@ -39,6 +39,14 @@ abstract class Strategy(val strategyId: String) : KoinComponent {
         }
     }
 
+    fun createOrder(symbol: String, type: OrderType, side: OrderSide, price: Float, size: Float, onUpdate: (OrderUpdate) -> Unit) {
+        //coroutineScope {
+        //    async {
+                orderManager.createOrder(symbol, type, side, price, size) //.listenForEvents().collect { update -> onUpdate(update) }
+         //   }
+        //}
+    }
+
     suspend fun start() {
 
         // register with the UI server

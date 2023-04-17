@@ -55,7 +55,9 @@ class MACDStrategy(val symbol: String,
     override suspend fun onStart() {
         log.info("onStart()")
 
-        subscribeCandles(symbol) { candle -> handleCandleEvent(candle) }
+        //subscribeCandles(symbol) { candle -> handleCandleEvent(candle) }
+
+        createOrder(symbol, OrderType.LIMIT, OrderSide.BUY, 20000f, 0.001f) { }
     }
 
     override suspend fun onUpdate() {
@@ -78,18 +80,18 @@ class MACDStrategy(val symbol: String,
             var order:CreateOrder? = null
             if (macdLine > signalLine) {
                 if(position.equals(BigDecimal.ZERO)) {
-                    order = createOrder(candle.startTimestamp, OrderSide.BUY, candle.close, positionSize.toFloat())
+                    order = createOrderTmp(candle.startTimestamp, OrderSide.BUY, candle.close, positionSize.toFloat())
                     position += positionSize
                 } else if(position < BigDecimal.ZERO) {
-                    order = createOrder(candle.startTimestamp, OrderSide.BUY, candle.close, positionSize2.toFloat())
+                    order = createOrderTmp(candle.startTimestamp, OrderSide.BUY, candle.close, positionSize2.toFloat())
                     position += positionSize2
                 }
             } else if (macdLine < signalLine) {
                 if(position.equals(BigDecimal.ZERO)) {
-                    order = createOrder(candle.startTimestamp, OrderSide.SELL, candle.close, positionSize.toFloat())
+                    order = createOrderTmp(candle.startTimestamp, OrderSide.SELL, candle.close, positionSize.toFloat())
                     position -= positionSize
                 } else if(position > BigDecimal.ZERO) {
-                    order = createOrder(candle.startTimestamp, OrderSide.SELL, candle.close, positionSize2.toFloat())
+                    order = createOrderTmp(candle.startTimestamp, OrderSide.SELL, candle.close, positionSize2.toFloat())
                     position -= positionSize2
                 }
             }
@@ -125,7 +127,7 @@ class MACDStrategy(val symbol: String,
         uiServer.send(StrategyMarketDataUpdate(strategyId, candle.startTimestamp, updates))
     }
 
-    private fun createOrder(time: Long, side: OrderSide, price: Float, size: Float):CreateOrder {
+    private fun createOrderTmp(time: Long, side: OrderSide, price: Float, size: Float):CreateOrder {
         log.info("Creating $side order ($size @ $price)")
         return CreateOrder(
             UUID.randomUUID().toString(),

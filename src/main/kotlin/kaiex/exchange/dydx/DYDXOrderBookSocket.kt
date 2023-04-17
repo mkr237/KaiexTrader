@@ -25,7 +25,7 @@ import java.util.TreeMap
 /*
  *
  */
-class DYDXOrderBookStream(private val symbol:String): DYDXSocket<OrderBook> {
+class DYDXOrderBookSocket(private val symbol:String): DYDXSocket<OrderBook> {
 
     @Serializable(with = MessageSerializer::class)
     sealed class Message {
