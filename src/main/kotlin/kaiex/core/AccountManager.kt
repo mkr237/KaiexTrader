@@ -18,7 +18,7 @@ class AccountManager : KoinComponent {
 
     private val accountBroadcasters:MutableMap<String, EventBroadcaster<AccountUpdate>> = mutableMapOf()
 
-    suspend fun subscribeAccountUpdates(accountId: String): EventBroadcaster<AccountUpdate> {
+    fun subscribeAccountUpdates(accountId: String): EventBroadcaster<AccountUpdate> {
         if(!accountBroadcasters.containsKey(accountId)) {
             log.info("Subscribing to account updates for account:$accountId")
             accountBroadcasters[accountId] = EventBroadcaster()

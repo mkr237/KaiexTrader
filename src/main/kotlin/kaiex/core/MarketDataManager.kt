@@ -24,7 +24,7 @@ class MarketDataManager : KoinComponent {
     private val tradeBroadcasters:MutableMap<String, EventBroadcaster<Trade>> = mutableMapOf()
     private val orderBookBroadcasters:MutableMap<String, EventBroadcaster<OrderBook>> = mutableMapOf()
 
-    suspend fun subscribeTrades(symbol: String): EventBroadcaster<Trade> {
+    fun subscribeTrades(symbol: String): EventBroadcaster<Trade> {
         if(!tradeBroadcasters.containsKey(symbol)) {
             log.info("Subscribing to trades for $symbol")
             tradeBroadcasters[symbol] = EventBroadcaster()

@@ -11,9 +11,6 @@ import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
 import io.ktor.websocket.*
 import kaiex.core.format
-import kaiex.strategy.StrategyChartConfig
-import kaiex.strategy.StrategyMarketDataUpdate
-import kaiex.strategy.StrategySnapshot
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import kotlinx.coroutines.launch
@@ -25,10 +22,7 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.collections.component1
 import kotlin.collections.component2
-import kotlin.collections.forEach
-import kotlin.collections.mutableMapOf
 import kotlin.collections.set
-import kotlin.collections.toList
 import kotlinx.serialization.encodeToString as myJsonEncode
 
 private const val CHANNEL_SIZE = 1000  // TODO too big?
@@ -84,7 +78,7 @@ class UIServer : KoinComponent {
                         // Send message history to new session
                         sessionLog.info("Sending history of ${messageHistory.size} to $sessionId")
                         messageHistory.forEach { message ->
-                            sessionLog.info("Sending $message to $sessionId")
+                            //sessionLog.info("Sending $message to $sessionId")
                             send(Frame.Text(format.myJsonEncode(message)))
                         }
 
@@ -143,7 +137,7 @@ class UIServer : KoinComponent {
     }
 
     fun register(config: StrategyChartConfig) {
-        log.debug("Registering strategy: $config")
+        log.info("Registering strategy: $config")
         strategies[config.strategyId] = config
     }
 

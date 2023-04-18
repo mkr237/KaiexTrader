@@ -1,8 +1,5 @@
 package kaiex.exchange.dydx
 
-import com.google.gson.Gson
-import com.google.gson.GsonBuilder
-import com.google.gson.JsonParser
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.contentnegotiation.*
@@ -23,7 +20,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.time.Instant
 
-class DYDXAccountSocket(): DYDXSocket<AccountUpdate> {
+class DYDXAccountSocketEndpoint: DYDXSocketEndpoint<AccountUpdate> {
 
     @Serializable(with = MessageSerializer::class)
     sealed class Message {
@@ -258,15 +255,11 @@ class DYDXAccountSocket(): DYDXSocket<AccountUpdate> {
     }
     private var socket: WebSocketSession? = null
 
-    // for pretty printing JSON // TODO move into parent class
-    private val gson: Gson = GsonBuilder().setPrettyPrinting().create()
-    private val jp = JsonParser()
-
-    override suspend fun connect(): Resource
-    <Unit> {
+    override suspend fun connect(): Resource<Unit> {
         return try {
+            log.info(DYDXSocketEndpoint.Endpoints.DYDXSocket.getURL())
             socket = client.webSocketSession {
-                url(DYDXSocket.Endpoints.DYDXSocket.url)
+                url(DYDXSocketEndpoint.Endpoints.DYDXSocket.getURL())
             }
             if(socket?.isActive == true) {
                 Resource.Success(Unit)
@@ -279,7 +272,7 @@ class DYDXAccountSocket(): DYDXSocket<AccountUpdate> {
 
     override suspend fun subscribe(): Resource<Unit> {
 
-        val nowISO = nowISO()
+        val nowISO = getISOTime()
         val sig = sign("/ws/accounts",
             "GET",
             nowISO,
@@ -327,7 +320,7 @@ class DYDXAccountSocket(): DYDXSocket<AccountUpdate> {
     }
 
     private fun onSubscribed(message: Subscribed): AccountUpdate {
-        log.info("Subscribed with id ${message.id}")
+        log.debug("Subscribed with $message")
         return AccountUpdate(
             message.id,
             convertOrders(message.contents.orders),
@@ -337,7 +330,7 @@ class DYDXAccountSocket(): DYDXSocket<AccountUpdate> {
     }
 
     private fun onChannelData(message: ChannelData): AccountUpdate {
-        log.info("Received channel data")
+        log.info("Received channel data: $message")
         return AccountUpdate(
             message.id,
             convertOrders(message.contents.orders),
@@ -349,7 +342,7 @@ class DYDXAccountSocket(): DYDXSocket<AccountUpdate> {
         TODO("Not yet implemented")
     }
 
-    private fun convertOrders(orders:List<DYDXAccountSocket.Order>?) = orders?.map { order ->
+    private fun convertOrders(orders:List<Order>?) = orders?.map { order ->
             OrderUpdate(
                 order.clientId,
                 order.id,
@@ -367,7 +360,7 @@ class DYDXAccountSocket(): DYDXSocket<AccountUpdate> {
             )
         }?: emptyList()
 
-    private fun convertFills(fills:List<DYDXAccountSocket.Fill>?) = fills?.map { fill ->
+    private fun convertFills(fills:List<Fill>?) = fills?.map { fill ->
         OrderFill(
             fill.id,
             fill.orderId,
@@ -382,7 +375,7 @@ class DYDXAccountSocket(): DYDXSocket<AccountUpdate> {
         )
     }?: emptyList()
 
-    private fun convertPositions(positions:List<DYDXAccountSocket.Position>?) = positions?.map { position ->
+    private fun convertPositions(positions:List<Position>?) = positions?.map { position ->
         Position(
             position.id,
             position.market,

@@ -25,7 +25,7 @@ import java.util.TreeMap
 /*
  *
  */
-class DYDXOrderBookSocket(private val symbol:String): DYDXSocket<OrderBook> {
+class DYDXOrderBookSocketEndpoint(private val symbol:String): DYDXSocketEndpoint<OrderBook> {
 
     @Serializable(with = MessageSerializer::class)
     sealed class Message {
@@ -111,7 +111,7 @@ class DYDXOrderBookSocket(private val symbol:String): DYDXSocket<OrderBook> {
 
         return try {
             socket = client.webSocketSession {
-                url(DYDXSocket.Endpoints.DYDXSocket.url)
+                url(DYDXSocketEndpoint.Endpoints.DYDXSocket.getURL())
             }
             if(socket?.isActive == true) {
                 Resource.Success(Unit)

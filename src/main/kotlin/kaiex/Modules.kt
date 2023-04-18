@@ -17,9 +17,9 @@ val core = module {
 
 val dydxExchangeService = module {
     single { DYDXExchangeService() }
-    factory { DYDXAccountSocket() }
-    factory { params -> DYDXTradeSocket(symbol = params.get()) }
-    factory { params -> DYDXOrderBookSocket(symbol = params.get()) }
+    factory { DYDXAccountSocketEndpoint() }
+    factory { params -> DYDXTradeSocketEndpoint(symbol = params.get()) }
+    factory { params -> DYDXOrderBookSocketEndpoint(symbol = params.get()) }
     factory { DYDXOrderEndpoint() }
     // props can used with getProperty("my_property")
 }

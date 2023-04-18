@@ -1,9 +1,4 @@
-import com.fersoft.converters.StarkwareOrderConverter
-import com.fersoft.hashing.ConstantPoints
-import com.fersoft.hashing.PedersonHash
-import com.fersoft.hashing.StarkHashCalculator
-import com.fersoft.signature.EcSigner
-import com.fersoft.signature.StarkCurve
+import com.fersoft.signature.StarkSigner
 import com.fersoft.types.*
 import io.ktor.client.*
 import io.ktor.client.call.*
@@ -52,7 +47,7 @@ suspend fun main() {
         /**
          * GET ACCOUNT TEST
          */
-        val nowISO = nowISO()
+        val nowISO = getISOTime()
         val sig = sign(accountURL, "GET", nowISO, mapOf())
 
         val response: HttpResponse = client.get(baseURL + accountURL) {
@@ -66,7 +61,7 @@ suspend fun main() {
 
         // TMP
         val account:String = response.body()
-        val acc = Json.decodeFromString<Map<String, DYDXAccountSocket.Account>>(account)
+        val acc = Json.decodeFromString<Map<String, DYDXAccountSocketEndpoint.Account>>(account)
         println(acc["account"])
 
         /**
@@ -84,14 +79,16 @@ suspend fun main() {
         val clientId = UUID.randomUUID().toString()
         println("*** Creating order to $side $size $symbol at $price and type is $type ***")
 
+        // create Stark signature for the order
         val starkPrivateKey = System.getenv("STARK_PRIVATE_KEY")
         val startkPrivateKeyInt = BigInteger(starkPrivateKey, 16)
-
         val order = Order(positionId, size.toString(), limitFee.toString(), symbol, StarkwareOrderSide.BUY, expiration)
         val orderWithPrice = OrderWithClientIdWithPrice(order, clientId, price.toString())
-        val starkwareOrder = StarkwareOrderConverter().fromOrderWithClientId(orderWithPrice, NetworkId.GOERLI)
-        val starkHashCalculator = StarkHashCalculator(PedersonHash(ConstantPoints.POINTS[0]))
-        val signature = EcSigner(StarkCurve.getInstance()).sign(startkPrivateKeyInt, starkHashCalculator.calculateHash(starkwareOrder))
+        //val starkwareOrder = StarkwareOrderConverter().fromOrderWithClientId(orderWithPrice, NetworkId.GOERLI)
+        //val starkHashCalculator = StarkHashCalculator(PedersonHash(ConstantPoints.POINTS[0]))
+        //val signature = EcSigner(StarkCurve.getInstance()).sign(startkPrivateKeyInt, starkHashCalculator.calculateHash(starkwareOrder))
+
+        val signature = StarkSigner().sign(orderWithPrice, NetworkId.GOERLI, startkPrivateKeyInt)
 
         val data = mapOf(
             "market" to symbol.toString(),
@@ -110,7 +107,7 @@ suspend fun main() {
 
         println("Order JSON:" + jsonStringify(data))
 
-        val nowISOOrder = nowISO()
+        val nowISOOrder = getISOTime()
         val sigOrder = sign(ordersURL, "POST", nowISOOrder, data)
 
         val responseOrder: HttpResponse = client.post(baseURL + ordersURL) {

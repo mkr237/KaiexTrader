@@ -1,9 +1,7 @@
 package kaiex.exchange.dydx
 
-import com.fersoft.signature.Signature
 import kaiex.util.UUID5
 import kotlinx.serialization.json.Json
-import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.util.*
 import javax.crypto.Mac
@@ -13,14 +11,6 @@ import kotlinx.serialization.encodeToString as myJsonEncode
 
 // for UUID5
 val NAMESPACE: UUID = UUID.fromString("0f9da948-a6fb-4c45-9edc-4685c3f3317d")
-
-//fun convert(sig: StarknetCurveSignature): String {
-//    return String.format("%1$64s%2$64s", sig.r.value.toString(16), sig.s.value.toString(16)).replace(" ", "0")
-//}
-
-fun deriveFinalSignature(sig: Signature): String {
-    return String.format("%1$64s%2$64s", sig.r.toString(16), sig.s.toString(16)).replace(" ", "0")
-}
 
 fun sign(
     requestPath: String,
@@ -56,9 +46,20 @@ fun getAccountId(address: String, accountNumber: Int = 0): String {
     return UUID5.fromUTF8(NAMESPACE, userId + accountNumber.toString()).toString()
 }
 
-fun nowISO(): String {
+fun getISOTime(plusMins: Int = 0): String {
     val tz = TimeZone.getTimeZone("UTC")
-    val df: DateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
+    val df = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
     df.timeZone = tz
+    val now = Date()
+    if(plusMins > 0)
+        return df.format(Date(now.time + plusMins * 60 * 1000L))
+
     return df.format(Date())
+}
+
+fun isoTimeStringToMillis(isoTimeString: String): Long {
+    val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault())
+    sdf.timeZone = TimeZone.getTimeZone("UTC")
+    val date = sdf.parse(isoTimeString)
+    return date.time
 }

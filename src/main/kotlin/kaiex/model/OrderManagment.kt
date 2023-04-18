@@ -34,6 +34,7 @@ enum class OrderTimeInForce {
     IOC
 }
 
+// TODO the timestamp fields should be changed to Instant but that means the UI messages can't use them directly anymore
 
 @Serializable
 data class CreateOrder(val orderId:String,
@@ -43,7 +44,9 @@ data class CreateOrder(val orderId:String,
                        val side:OrderSide,
                        val price: Float,
                        val size: Float,
+                       val limitFee: Float,
                        val timeInForce:OrderTimeInForce,
+                       val postOnly:Boolean,
                        val reduceOnly: Boolean,
                        val createdAt: Long)
 
@@ -88,5 +91,5 @@ data class Position(val positionId:String,
                     val closedAt:Long)
 
 interface OrderService {
-    suspend fun createOrder(symbol: String, type: OrderType, side:OrderSide, price: Float, size: Float)
+    suspend fun createOrder(order: CreateOrder):Result<String>
 }

@@ -13,7 +13,8 @@ data class Candle (
     val low: Float,
     val close: Float,
     val numTrades: Int,
-    val volume: Float
+    val volume: Float,
+    val historical: Boolean
 )
 
 data class Trade (
@@ -23,7 +24,8 @@ data class Trade (
     val price:Float,
     val createdAt:Instant,
     val receivedAt:Instant,
-    val liquidation:Boolean
+    val liquidation:Boolean,
+    val historical: Boolean
 )
 
 data class OrderBookEntry (

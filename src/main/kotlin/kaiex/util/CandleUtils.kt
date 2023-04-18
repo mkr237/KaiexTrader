@@ -30,12 +30,12 @@ fun Flow<Trade>.toCandles(): Flow<Candle> = flow {
             totalVolume = trade.size
             startTime = trade.createdAt.truncatedTo(ChronoUnit.MINUTES)
             lastUpdate = trade.createdAt.truncatedTo(ChronoUnit.MINUTES)
-            emit(Candle(startTime!!.epochSecond, lastUpdate!!.epochSecond, open, high, low, close, tradeCount, totalVolume))
+            emit(Candle(startTime!!.epochSecond, lastUpdate!!.epochSecond, open, high, low, close, tradeCount, totalVolume, trade.historical))
 
         } else if (trade.createdAt.truncatedTo(ChronoUnit.MINUTES) != startTime) {
 
             // send the previous candle
-            emit(Candle(startTime!!.epochSecond, lastUpdate!!.epochSecond, open, high, low, close, tradeCount, totalVolume))
+            emit(Candle(startTime!!.epochSecond, lastUpdate!!.epochSecond, open, high, low, close, tradeCount, totalVolume, trade.historical))
 
             // create and send new candle
             open = trade.price
@@ -46,7 +46,7 @@ fun Flow<Trade>.toCandles(): Flow<Candle> = flow {
             totalVolume = trade.size
             startTime = trade.createdAt.truncatedTo(ChronoUnit.MINUTES)
             lastUpdate = trade.createdAt.truncatedTo(ChronoUnit.MINUTES)
-            emit(Candle(startTime!!.epochSecond, lastUpdate!!.epochSecond, open, high, low, close, tradeCount, totalVolume))
+            emit(Candle(startTime!!.epochSecond, lastUpdate!!.epochSecond, open, high, low, close, tradeCount, totalVolume, trade.historical))
 
         } else {
 
@@ -57,7 +57,7 @@ fun Flow<Trade>.toCandles(): Flow<Candle> = flow {
             tradeCount++
             totalVolume += trade.size
             lastUpdate = trade.createdAt.truncatedTo(ChronoUnit.MINUTES)
-            emit(Candle(startTime!!.epochSecond, lastUpdate!!.epochSecond, open, high, low, close, tradeCount, totalVolume))
+            emit(Candle(startTime!!.epochSecond, lastUpdate!!.epochSecond, open, high, low, close, tradeCount, totalVolume, trade.historical))
         }
     }
 }

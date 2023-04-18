@@ -1,6 +1,8 @@
 package kaiex.strategy
 
 import kaiex.model.OrderBook
+import kaiex.ui.ChartSeriesConfig
+import kaiex.ui.StrategyChartConfig
 import kotlinx.serialization.Serializable
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -13,48 +15,25 @@ class OrderBookWatcher(val symbol: String): Strategy("OrderBookWatcher:$symbol")
         strategyName = javaClass.simpleName,
         strategyDescription = "",
         chartConfig = listOf(
-            ChartSeriesConfig(
-                id = "price",
-                seriesType = "candle",
-                pane = 0,
-                color = "blue"
-            ),
-            ChartSeriesConfig(
-                id = "macd",
-                seriesType = "line",
-                pane = 1,
-                color = "green"
-            ),
-            ChartSeriesConfig(
-                id = "signal",
-                seriesType = "line",
-                pane = 1,
-                color = "red"
-            ),
-            ChartSeriesConfig(
-                id = "histogram",
-                seriesType = "histogram",
-                pane = 1,
-                color = "purple"
-            )
+            ChartSeriesConfig("price", "candle", 0, "#00FF00"),
+            ChartSeriesConfig("histogram", "histogram", 1, "#26a69a"),
+            ChartSeriesConfig("macd", "line", 1, "#2196F3"),
+            ChartSeriesConfig("signal", "line", 1, "#FC6C02")
         )
     )
 
     @Serializable
     data class Update(val timestamp:Long, val bestBid:Double, val bestAsk:Double, val midPrice:Double)
 
-    override suspend fun onStart() {
+    override fun onStart() {
         log.info("onStart()")
-//        scope.async {
-//            marketDataManager.subscribeOrderBook(symbol).listenForEvents().collect { ob -> handleOrderBookUpdate(ob) }
-//        }
     }
 
-    override suspend fun onUpdate() {
+    override fun onUpdate() {
         log.info("onUpdate()")
     }
 
-    override suspend fun onStop() {
+    override fun onStop() {
         log.info("onStop()")
     }
 
@@ -67,18 +46,5 @@ class OrderBookWatcher(val symbol: String): Strategy("OrderBookWatcher:$symbol")
         val update = OrderBookWatcher.Update(Instant.now().epochSecond, bestBid, bestAsk, midPrice)
         //log.info(update.toString())
         //uiServer.sendMessage("order_book", format.myJsonEncode(update))
-        uiServer.send(
-            StrategySnapshot(
-                strategyId,
-                Instant.now().epochSecond,
-                0f,
-                0,
-                0f,
-                0f,
-                0f,
-                emptyMap(),
-                orders,
-                fills,
-                positions))
     }
 }

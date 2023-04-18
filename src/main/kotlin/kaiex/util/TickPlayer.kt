@@ -37,7 +37,8 @@ class HistDataAdapter(val symbol: String) : TickAdapter {
             price = (bidPrice * 20000f),
             createdAt = LocalDateTime.parse(timestampStr, formatter).atZone(ZoneId.systemDefault()).toInstant(),
             receivedAt = Instant.now(),
-            liquidation = false
+            liquidation = false,
+            historical = false
         )
     }
 }
@@ -61,7 +62,8 @@ class BinanceAdapter(val symbol: String) : TickAdapter {
             price = price,
             createdAt = Instant.ofEpochMilli(timestamp.toLong()).truncatedTo(ChronoUnit.SECONDS),
             receivedAt = Instant.now(),
-            liquidation = false
+            liquidation = false,
+            historical = false
         )
     }
 }

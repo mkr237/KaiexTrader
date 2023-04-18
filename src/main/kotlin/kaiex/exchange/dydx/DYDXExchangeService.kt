@@ -1,6 +1,5 @@
 package kaiex.exchange.dydx
 
-import com.fersoft.signature.Signature
 import com.fersoft.signature.StarkSigner
 import com.fersoft.types.*
 import kaiex.model.*
@@ -14,6 +13,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.math.BigInteger
 import java.util.*
+import kotlin.reflect.typeOf
 
 
 class DYDXExchangeService: KoinComponent, MarketDataService, OrderService, AccountService {
@@ -26,7 +26,7 @@ class DYDXExchangeService: KoinComponent, MarketDataService, OrderService, Accou
 
     override suspend fun subscribeTrades(symbol: String): Flow<Trade> {
 
-        val service : DYDXTradeSocket by inject { parametersOf (symbol) }
+        val service : DYDXTradeSocketEndpoint by inject { parametersOf (symbol) }
 
         // connect to service
         log.info("Creating websocket for $symbol")
@@ -61,7 +61,7 @@ class DYDXExchangeService: KoinComponent, MarketDataService, OrderService, Accou
 
     override suspend fun subscribeOrderBook(symbol: String): Flow<OrderBook> {
 
-        val service : DYDXOrderBookSocket by inject { parametersOf (symbol) }
+        val service : DYDXOrderBookSocketEndpoint by inject { parametersOf (symbol) }
 
         // connect to service
         log.info("Creating websocket for $symbol")
@@ -98,47 +98,48 @@ class DYDXExchangeService: KoinComponent, MarketDataService, OrderService, Accou
     /**
      * Order Service
      */
-    override suspend fun createOrder(symbol: String, type: OrderType, side: OrderSide, price: Float, size: Float) {
+    override suspend fun createOrder(order: CreateOrder):Result<String> {
+
         val service : DYDXOrderEndpoint by inject()
 
-        log.info("Creating order for $symbol...") // TODO
+        log.info("Creating order: $order")
+        return service.post(order)
 
-        val starkPublicKey = "04832957876ceb5bd21d203de44e1700536baab7b1484f704db25f93fe6c67c0"
-        val starkPrivateKey = "01e31a364044021297c0e7e1f5a1a20a42558537a1ba7decaf139e43a7e84b6e"  // TODO DO NOT PUSH!!!
-        val PRIVATE_KEY = BigInteger(starkPrivateKey, 16)
 
-        val clientId = UUID.randomUUID().toString()
+//        val positionId = "5630"  // TODO get from account
+//        val symbol = DydxMarket.fromString(symbol)
+//        val size = size
+//        val price = price
+//        val side = side
+//        val type = type
+//        val limitFee = limitFee
+//        val timeInForce = timeInForce
+//        val expiration = getISOTime(plusMins = 60)
+//        val clientId = UUID.randomUUID().toString()
 
-        val order = Order(
-            "1812",
-            size.toString(),
-            "0.015",
-            DydxMarket.BTC_USD,
-            StarkwareOrderSide.BUY,
-            "2023-09-20T00:00:00.000Z"
-        )
+//        // create Stark signature for the order
+//        val starkPrivateKey = System.getenv("STARK_PRIVATE_KEY")
+//        val startkPrivateKeyInt = BigInteger(starkPrivateKey, 16)
+//        val order = Order(positionId, size.toString(), limitFee.toString(), symbol, StarkwareOrderSide.valueOf(side.toString()), expiration)
+//        val orderWithPrice = OrderWithClientIdWithPrice(order, clientId, price.toString())
+//        val signature = StarkSigner().sign(orderWithPrice, NetworkId.GOERLI, startkPrivateKeyInt)
 
-        val o1 = OrderWithClientIdAndQuoteAmount(order, clientId, "20000")
-        val o2 = OrderWithClientId(order, clientId)
+//        val data = mapOf(
+//            "market" to symbol.toString(),
+//            "side" to side.toString(),
+//            "type" to type.toString(),
+//            "timeInForce" to timeInForce.toString(),
+//            "size" to size.toString(),
+//            "price" to price.toString(),
+//            "limitFee" to limitFee.toString(),
+//            "expiration" to expiration,
+//            "postOnly" to "false",
+//            "clientId" to clientId,
+//            "signature" to signature.toString(),
+//            "reduceOnly" to "false"
+//        )
 
-        val starkSigner = StarkSigner()
-        val signature: Signature = starkSigner.sign(o1, NetworkId.GOERLI, PRIVATE_KEY)
-
-        val data = mapOf(
-            "market" to symbol,
-            "side" to OrderSide.BUY.toString(),
-            "type" to OrderType.LIMIT.toString(),
-            "size" to size.toString(),
-            "price" to "20000",
-            "timeInForce" to "GTT",
-            "postOnly" to "false",
-            "clientId" to clientId,
-            "limitFee" to "0.015",
-            "expiration" to "2023-09-20T00:00:00.000Z",
-            "signature" to signature.toString()
-        )
-
-        service.post("/v3/orders", data)
+//        service.post(data)
     }
 
     /**
@@ -146,7 +147,7 @@ class DYDXExchangeService: KoinComponent, MarketDataService, OrderService, Accou
      */
     override suspend fun subscribeAccountUpdates(accountId: String): Flow<AccountUpdate> {
 
-        val service : DYDXAccountSocket by inject()
+        val service : DYDXAccountSocketEndpoint by inject()
 
         // connect to service
         log.info("Creating websocket for account updates")

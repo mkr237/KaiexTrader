@@ -25,7 +25,7 @@ import java.time.temporal.ChronoUnit
 /*
  *
  */
-class DYDXTradeSocket(private val symbol:String): DYDXSocket<Trade> {
+class DYDXTradeSocketEndpoint(private val symbol:String): DYDXSocketEndpoint<Trade> {
 
     @Serializable(with = MessageSerializer::class)
     sealed class Message {
@@ -108,7 +108,7 @@ class DYDXTradeSocket(private val symbol:String): DYDXSocket<Trade> {
 
         return try {
             socket = client.webSocketSession {
-                url(DYDXSocket.Endpoints.DYDXSocket.url)
+                url(DYDXSocketEndpoint.Endpoints.DYDXSocket.getURL())
             }
             if(socket?.isActive == true) {
                 Resource.Success(Unit)
@@ -158,16 +158,16 @@ class DYDXTradeSocket(private val symbol:String): DYDXSocket<Trade> {
     }
 
     private fun onSubscribed(message: Subscribed): List<kaiex.model.Trade> {
-        log.debug("Subscribed to $message")
-        return convertTradeList(message.contents.trades)
+        log.debug("Subscribed with $message")
+        return convertTradeList(message.contents.trades, true)
     }
 
     private fun onChannelData(message: ChannelData): List<kaiex.model.Trade> {
-        log.debug("Received channel data for $message")
-        return convertTradeList(message.contents.trades)
+        log.debug("Received channel data: $message")
+        return convertTradeList(message.contents.trades, false)
     }
 
-    private fun convertTradeList(tradesIn: List<Trade>): List<kaiex.model.Trade> {
+    private fun convertTradeList(tradesIn: List<Trade>, historical: Boolean): List<kaiex.model.Trade> {
         var trades = ArrayList<kaiex.model.Trade>()
         tradesIn.reversed().forEach { trade ->
             trades.add(Trade(symbol,
@@ -176,7 +176,8 @@ class DYDXTradeSocket(private val symbol:String): DYDXSocket<Trade> {
                 trade.price.toFloat(),
                 Instant.parse(trade.createdAt),
                 Instant.now().truncatedTo(ChronoUnit.MILLIS),
-                trade.liquidation))
+                trade.liquidation,
+                historical))
         }
         return trades
     }
