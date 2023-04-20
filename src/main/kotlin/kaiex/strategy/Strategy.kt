@@ -4,7 +4,6 @@ import kaiex.core.*
 import kaiex.model.*
 import kaiex.ui.*
 import kotlinx.coroutines.*
-import kotlinx.serialization.Serializable
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import org.slf4j.Logger
@@ -16,18 +15,15 @@ abstract class Strategy(val strategyId: String) : KoinComponent {
 
     private val log: Logger = LoggerFactory.getLogger(javaClass.simpleName)
 
-    private val accountManager : AccountManager by inject()
-
     private val marketDataManager : MarketDataManager by inject()
     private val orderManager : OrderManager by inject()
     private val riskManager : RiskManager by inject()
     private val reportManager : ReportManager by inject()
     private val uiServer : UIServer by inject()
 
-    protected val orderIds : MutableSet<String> = mutableSetOf()
-    protected val orders : MutableMap<String, OrderUpdate> = mutableMapOf()
-    protected val fills : MutableMap<String, OrderFill> = mutableMapOf()
-    protected val positions : MutableMap<String, Position> = mutableMapOf()
+    private val orders : MutableMap<String, OrderUpdate> = mutableMapOf() // by OrderId
+    private val fills : MutableMap<String, MutableList<OrderFill>> = mutableMapOf()  // by orderId
+    private val positions : MutableMap<String, Position> = mutableMapOf()  // by symbol
     abstract val config : StrategyChartConfig
 
     abstract fun onStart()
@@ -35,19 +31,10 @@ abstract class Strategy(val strategyId: String) : KoinComponent {
     abstract fun onStop()
 
     suspend fun start() {
-
-        // register with the UI server
+        // register with the UI server and start
         uiServer.register(config)
-
-        //
         coroutineScope {
-            handleAccountUpdate(AccountUpdate(strategyId, emptyList(), emptyList(), emptyList()))
-            async {
-                accountManager.subscribeAccountUpdates("0").listenForEvents().collect { update ->
-                    handleAccountUpdate(update)
-                    onUpdate()
-                }
-            }
+            sendStrategySnapshot()
             onStart()
         }
     }
@@ -57,6 +44,14 @@ abstract class Strategy(val strategyId: String) : KoinComponent {
 
         CoroutineScope(Dispatchers.Default).launch {
             marketDataManager.subscribeTrades(symbol).listenForEvents().toCandles().collect { candle -> onCandle(candle) }
+        }
+    }
+
+    protected fun subscribeOrderBook(symbol: String,
+                                    onUpdate: (OrderBook) -> Unit) {
+
+        CoroutineScope(Dispatchers.Default).launch {
+            marketDataManager.subscribeOrderBook(symbol).listenForEvents().collect { update -> onUpdate(update) }
         }
     }
 
@@ -71,24 +66,39 @@ abstract class Strategy(val strategyId: String) : KoinComponent {
         CoroutineScope(Dispatchers.Default).launch {
             orderManager.createOrder(symbol, type, side, price, size, limitFee, timeInForce).onSuccess { orderId ->
                 log.info("Successfully created order: $orderId")
-                orderIds.add(orderId)
+
+                async {
+                    // listen for order updates
+                    orderManager.subscribeOrderUpdates(orderId).collect { update ->
+                        log.info("Received update for order: $orderId: $update")
+                        orders[update.orderId] = update
+                        sendStrategySnapshot()
+                    }
+                }
+
+                async {
+                    // listen for order fills
+                    orderManager.subscribeOFills(orderId).collect { fill ->
+                        log.info("Received fill for order: $orderId: $fill")
+                        if(!fills.containsKey(fill.orderId))
+                            fills[fill.orderId] = mutableListOf()
+                        fills[fill.orderId]?.add(fill)
+                        sendStrategySnapshot()
+                    }
+                }
+
             }.onFailure { e ->
                 log.error("Failed to create order: $e")
             }
         }
     }
 
-    private fun handleAccountUpdate(update: AccountUpdate) {
-        log.info("Received Account Update: $update")
-        update.orders.filter { order ->
-            log.info("Checking order ${order.orderId}")
-            orderIds.contains(order.orderId)
-        }.forEach { order ->
-            log.info("Updating order ${order.orderId}")
-            orders[order.orderId] = order
-        }
-        update.fills.filter { fill -> orderIds.contains(fill.orderId) }.forEach { fill -> fills[fill.fillId] = fill }
-        update.positions.forEach { position -> positions[position.positionId] = position } //TODO
+    protected fun getCurrentPosition(symbol: String): Float {
+        // TODO I don't think this is reliable!
+        return positions[symbol]?.size ?: 0f
+    }
+
+    private fun sendStrategySnapshot() {
         uiServer.send(
             StrategySnapshot(
                 strategyId,
@@ -100,12 +110,17 @@ abstract class Strategy(val strategyId: String) : KoinComponent {
                 1.31f,
                 emptyMap(),
                 orders,
-                fills,
+                extractFills(fills),
                 positions))
     }
 
-    protected fun getCurrentPosition(symbol: String): Float {
-        return 0f
+    private fun extractFills(fillsByOrderId: MutableMap<String, MutableList<OrderFill>>): Map<String, OrderFill> {
+        return fillsByOrderId
+            .flatMap { (orderId, fills) ->
+                fills.map { fill ->
+                    fill.fillId to fill
+                }
+            }.toMap()
     }
 
     protected fun sendStrategyMarketDataUpdate(timestamp: Long, updates: List<SeriesUpdate>) {

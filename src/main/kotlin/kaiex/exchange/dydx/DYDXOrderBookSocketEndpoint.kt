@@ -94,7 +94,7 @@ class DYDXOrderBookSocketEndpoint(private val symbol:String): DYDXSocketEndpoint
         }
         install(WebSockets)
         install(ContentNegotiation) {
-            json()
+            json(Json { ignoreUnknownKeys = true })
         }
     }
     private var socket: WebSocketSession? = null

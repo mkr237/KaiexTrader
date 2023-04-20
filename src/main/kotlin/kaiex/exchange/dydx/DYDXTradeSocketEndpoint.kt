@@ -99,7 +99,7 @@ class DYDXTradeSocketEndpoint(private val symbol:String): DYDXSocketEndpoint<Tra
         }
         install(WebSockets)
         install(ContentNegotiation) {
-            json()
+            json(Json { ignoreUnknownKeys = true })
         }
     }
     private var socket: WebSocketSession? = null

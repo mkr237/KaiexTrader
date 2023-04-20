@@ -34,6 +34,11 @@ enum class OrderTimeInForce {
     IOC
 }
 
+enum class OrderRole {
+    MAKER,
+    TAKER
+}
+
 // TODO the timestamp fields should be changed to Instant but that means the UI messages can't use them directly anymore
 
 @Serializable
@@ -75,6 +80,7 @@ data class OrderFill(val fillId: String,
                      val price: Float,
                      val size: Float,
                      val fee: Float,
+                     val role: OrderRole,
                      val createdAt: Long,
                      val updatedAt: Long
 )

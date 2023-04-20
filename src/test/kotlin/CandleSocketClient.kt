@@ -7,6 +7,7 @@ import io.ktor.client.request.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.isActive
+import kotlinx.serialization.json.Json
 
 suspend fun main() {
 
@@ -22,7 +23,7 @@ suspend fun main() {
         }
         install(WebSockets)
         install(ContentNegotiation) {
-            json()
+            json(Json { ignoreUnknownKeys = true })
         }
     }
 

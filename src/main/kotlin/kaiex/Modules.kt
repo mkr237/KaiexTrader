@@ -3,13 +3,15 @@ package kaiex
 import kaiex.core.*
 import kaiex.exchange.dydx.*
 import kaiex.ui.UIServer
+import org.koin.core.context.loadKoinModules
 import org.koin.dsl.module
+import org.koin.core.component.get
 
 val core = module {
     single { Kaiex() }
     single { AccountManager() }
     single { MarketDataManager() }
-    single { OrderManager() }
+    single(createdAtStart = true) { OrderManager() }
     single { RiskManager() }
     single { ReportManager() }
     single { UIServer() }

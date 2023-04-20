@@ -250,7 +250,7 @@ class DYDXAccountSocketEndpoint: DYDXSocketEndpoint<AccountUpdate> {
         }
         install(WebSockets)
         install(ContentNegotiation) {
-            json()
+            json(Json { ignoreUnknownKeys = true })
         }
     }
     private var socket: WebSocketSession? = null
@@ -306,6 +306,7 @@ class DYDXAccountSocketEndpoint: DYDXSocketEndpoint<AccountUpdate> {
                         is Connected -> onConnected(dydxAccountUpdate)
                         is Subscribed -> emit(onSubscribed(dydxAccountUpdate))
                         is ChannelData -> emit(onChannelData(dydxAccountUpdate))
+                        else -> {}
                     }
                 }
                 ?: flow { }
@@ -363,13 +364,14 @@ class DYDXAccountSocketEndpoint: DYDXSocketEndpoint<AccountUpdate> {
     private fun convertFills(fills:List<Fill>?) = fills?.map { fill ->
         OrderFill(
             fill.id,
-            fill.orderId,
+            fill.orderClientId,
             fill.market,
             OrderType.valueOf(fill.type),
             OrderSide.valueOf(fill.side),
             fill.price.toFloat(),
             fill.size.toFloat(),
             fill.fee.toFloat(),
+            OrderRole.valueOf(fill.liquidity),
             Instant.parse(fill.createdAt).epochSecond,
             Instant.parse(fill.updatedAt).epochSecond
         )

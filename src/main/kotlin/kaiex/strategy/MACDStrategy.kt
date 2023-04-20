@@ -1,14 +1,15 @@
 package kaiex.strategy
 
 import kaiex.indicator.MACD
-import kaiex.model.*
+import kaiex.model.Candle
+import kaiex.model.OrderSide
+import kaiex.model.OrderTimeInForce
+import kaiex.model.OrderType
 import kaiex.ui.ChartSeriesConfig
 import kaiex.ui.SeriesUpdate
 import kaiex.ui.StrategyChartConfig
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.util.Timer
-import java.util.TimerTask
 import kotlin.math.abs
 
 class MACDStrategy(val symbol: String,
@@ -38,19 +39,6 @@ class MACDStrategy(val symbol: String,
     override fun onStart() {
         log.info("onStart()")
         subscribeCandles(symbol) { candle -> onNewCandle(candle) }
-
-        // BUY/SELL every 30 seconds
-        val timer = Timer()
-        timer.scheduleAtFixedRate(object : TimerTask() {
-            var s = OrderSide.BUY
-            var p = 31000f
-            override fun run() {
-                log.info("SENDING $s ORDER @ $p")
-                createOrder(p, s, 0.001f)
-                p = if (p == 31000f) 29000f else 31000f
-                s = if (s == OrderSide.BUY) OrderSide.SELL else OrderSide.BUY
-            }
-        }, 0, 30000)
     }
 
     override fun onUpdate() {
@@ -75,7 +63,7 @@ class MACDStrategy(val symbol: String,
                 val currentPosition = getCurrentPosition(symbol)
                 if(currentPosition < maxLong) {
                     log.info("Current position: $currentPosition - BUYING ${maxLong - currentPosition}")
-                    //createOrder(candle.close, OrderSide.BUY, maxLong - currentPosition)
+                    createOrder(candle.close, OrderSide.BUY, maxLong - currentPosition)
                 } else {
                     log.info("Already at or above MAX_LONG")
                 }
@@ -85,7 +73,7 @@ class MACDStrategy(val symbol: String,
                 val currentPosition = getCurrentPosition(symbol)
                 if(currentPosition > maxShort) {
                     log.info("Current position: $currentPosition - SELLING ${abs(maxShort - currentPosition)}")
-                    //createOrder(candle.close, OrderSide.SELL, abs(maxShort - currentPosition))
+                    createOrder(candle.close, OrderSide.SELL, abs(maxShort - currentPosition))
                 } else {
                     log.info("Already at or below MAX_SHORT")
                 }

@@ -24,8 +24,6 @@ dependencies {
 
     implementation(fileTree("libs") { include("*.jar") })
     implementation("com.squareup.okhttp3:okhttp:4.9.3")
-    implementation("org.bouncycastle:bcprov-jdk15on:1.69")
-    implementation("org.bouncycastle:bcpkix-jdk15on:1.69")
 
     // Logback
     implementation("ch.qos.logback:logback-classic:$logback_version")
