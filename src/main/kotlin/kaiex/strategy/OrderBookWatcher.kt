@@ -8,12 +8,18 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.time.Instant
 
-class OrderBookWatcher(val symbol: String): Strategy("OrderBookWatcher:$symbol") {
+class OrderBookWatcher(val symbol: String): Strategy(
+    strategyId = "OrderBookWatcher:$symbol",
+    symbols = listOf(symbol),
+    parameters = mapOf()) {
+
     private val log: Logger = LoggerFactory.getLogger(strategyId)
     override val config = StrategyChartConfig(
         strategyId = strategyId,
-        strategyName = javaClass.simpleName,
+        strategyType = javaClass.simpleName,
         strategyDescription = "",
+        symbols = symbols,
+        parameters = parameters,
         chartConfig = listOf(
             ChartSeriesConfig("price", "candle", 0, "#00FF00"),
             ChartSeriesConfig("histogram", "histogram", 1, "#26a69a"),

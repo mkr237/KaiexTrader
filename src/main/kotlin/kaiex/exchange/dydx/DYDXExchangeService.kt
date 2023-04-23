@@ -1,7 +1,5 @@
 package kaiex.exchange.dydx
 
-import com.fersoft.signature.StarkSigner
-import com.fersoft.types.*
 import kaiex.model.*
 import kaiex.util.Resource
 import kotlinx.coroutines.flow.Flow
@@ -11,14 +9,50 @@ import org.koin.core.component.inject
 import org.koin.core.parameter.parametersOf
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.math.BigInteger
-import java.util.*
-import kotlin.reflect.typeOf
 
 
 class DYDXExchangeService: KoinComponent, MarketDataService, OrderService, AccountService {
 
     private val log: Logger = LoggerFactory.getLogger(javaClass.simpleName)
+
+    /**
+     * Markets Service
+     */
+    override suspend fun subscribeMarketInfo(): Flow<MarketInfo> {
+
+        val service : DYDXMarketsSocketEndpoint by inject()
+
+        // connect to service
+        log.info("Creating websocket for markets information")
+        when(service.connect()) {
+            is Resource.Success -> {
+
+                // subscribe to symbol
+                log.info("Subscribing market info updates")
+                return when (service.subscribe()) {
+                    is Resource.Success -> {
+
+                        // observe updates
+                        log.info("Listening for market info updates")
+                        service.observeUpdates()
+                    }
+                    is Resource.Error -> {
+                        log.error("Failed to subscribe to market info updates")
+                        flow {  }
+                    }
+                }
+            }
+            is Resource.Error -> {
+                log.error("Failed to create websocket for market info updates")
+                return flow {  }
+            }
+        }
+    }
+
+
+    override suspend fun unsubscribeMarketInfo() {
+        TODO("Not yet implemented")
+    }
 
     /**
      * Market Data Service
@@ -104,42 +138,6 @@ class DYDXExchangeService: KoinComponent, MarketDataService, OrderService, Accou
 
         log.info("Creating order: $order")
         return service.post(order)
-
-
-//        val positionId = "5630"  // TODO get from account
-//        val symbol = DydxMarket.fromString(symbol)
-//        val size = size
-//        val price = price
-//        val side = side
-//        val type = type
-//        val limitFee = limitFee
-//        val timeInForce = timeInForce
-//        val expiration = getISOTime(plusMins = 60)
-//        val clientId = UUID.randomUUID().toString()
-
-//        // create Stark signature for the order
-//        val starkPrivateKey = System.getenv("STARK_PRIVATE_KEY")
-//        val startkPrivateKeyInt = BigInteger(starkPrivateKey, 16)
-//        val order = Order(positionId, size.toString(), limitFee.toString(), symbol, StarkwareOrderSide.valueOf(side.toString()), expiration)
-//        val orderWithPrice = OrderWithClientIdWithPrice(order, clientId, price.toString())
-//        val signature = StarkSigner().sign(orderWithPrice, NetworkId.GOERLI, startkPrivateKeyInt)
-
-//        val data = mapOf(
-//            "market" to symbol.toString(),
-//            "side" to side.toString(),
-//            "type" to type.toString(),
-//            "timeInForce" to timeInForce.toString(),
-//            "size" to size.toString(),
-//            "price" to price.toString(),
-//            "limitFee" to limitFee.toString(),
-//            "expiration" to expiration,
-//            "postOnly" to "false",
-//            "clientId" to clientId,
-//            "signature" to signature.toString(),
-//            "reduceOnly" to "false"
-//        )
-
-//        service.post(data)
     }
 
     /**

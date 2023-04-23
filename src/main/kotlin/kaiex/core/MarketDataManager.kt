@@ -1,9 +1,7 @@
 package kaiex.core
 
 import kaiex.exchange.dydx.DYDXExchangeService
-import kaiex.model.Candle
-import kaiex.model.OrderBook
-import kaiex.model.Trade
+import kaiex.model.*
 import kaiex.util.EventBroadcaster
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -12,7 +10,6 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import toCandles
 import kotlin.collections.set
 
 class MarketDataManager : KoinComponent {
@@ -21,8 +18,36 @@ class MarketDataManager : KoinComponent {
     private val dydxExchangeService : DYDXExchangeService by inject()
 
     // TODO maintain a refCount to allow unsubscribes
+    private val marketInfoBroadcasters:MutableMap<String, EventBroadcaster<MarketInfo>> = mutableMapOf()
     private val tradeBroadcasters:MutableMap<String, EventBroadcaster<Trade>> = mutableMapOf()
     private val orderBookBroadcasters:MutableMap<String, EventBroadcaster<OrderBook>> = mutableMapOf()
+
+    init {
+        log.info("Starting")
+        CoroutineScope(Dispatchers.Default).launch {// TODO launch with a launch!
+            launch {
+                dydxExchangeService.subscribeMarketInfo().collect { marketInfo: MarketInfo ->
+                    if(marketInfoBroadcasters.containsKey(marketInfo.symbol)) {
+                        marketInfoBroadcasters[marketInfo.symbol]?.sendEvent(marketInfo)
+                    }
+                }
+            }
+        }
+    }
+
+    fun subscribeMarketInfo(symbol: String): EventBroadcaster<MarketInfo> {
+        if(!marketInfoBroadcasters.containsKey(symbol)) {
+            marketInfoBroadcasters[symbol] = EventBroadcaster()
+        } else {
+            log.info("MarketInfo subscription exists for $symbol")
+        }
+
+        return marketInfoBroadcasters[symbol] ?: throw RuntimeException("Unknown Symbol: $symbol")
+    }
+
+    fun unsubscribeMarketInfo() {
+        // TODO Not Implemented
+    }
 
     fun subscribeTrades(symbol: String): EventBroadcaster<Trade> {
         if(!tradeBroadcasters.containsKey(symbol)) {

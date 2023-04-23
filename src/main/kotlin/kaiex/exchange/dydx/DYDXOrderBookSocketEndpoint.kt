@@ -205,25 +205,6 @@ class DYDXOrderBookSocketEndpoint(private val symbol:String): DYDXSocketEndpoint
         Instant.now()
     )
 
-//    private fun createOrderBook2() : OrderBook {
-//
-//        val bids = mutableListOf<OrderBookEntry>()
-//        val asks = mutableListOf<OrderBookEntry>()
-//
-//        log.info("----------- BIDS ------------")
-//        currentBids.keys.filter { currentBids[it]!!.size.toDouble() > 0 }.reversed().take(10).forEach {
-//            log.info("$it : ${currentBids[it]}")
-//            bids.add(OrderBookEntry(currentBids[it]!!.size.toFloat(), currentBids[it]!!.price.toFloat()))
-//        }
-//        log.info("----------- ASKS ------------")
-//        currentAsks.keys.filter { currentAsks[it]!!.size.toDouble() > 0 }.take(10).forEach {
-//            log.info("$it : ${currentAsks[it]}")
-//            asks.add(OrderBookEntry(currentAsks[it]!!.size.toFloat(), currentAsks[it]!!.price.toFloat()))
-//        }
-//
-//        return OrderBook(0, symbol, bids, asks, Instant.now())
-//    }
-
     override suspend fun disconnect() {
         socket?.close()
     }

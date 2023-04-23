@@ -30,7 +30,7 @@ class OrderManager : KoinComponent {
     init {
         log.info("Starting")
         CoroutineScope(Dispatchers.Default).launch {
-            async {
+            launch {
                 accountManager.subscribeAccountUpdates("0").listenForEvents().collect { update ->
                     handleAccountUpdate(update)
                 }

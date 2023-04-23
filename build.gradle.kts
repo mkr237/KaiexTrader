@@ -51,6 +51,10 @@ dependencies {
     // KTOR MISC
     implementation("io.ktor:ktor-serialization-kotlinx-json:$ktor_version")
     implementation("io.ktor:ktor-server-cors:$ktor_version")
+
+    // TESTING
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.hamcrest:java-hamcrest:2.0.0.0")
 }
 
 tasks.test {

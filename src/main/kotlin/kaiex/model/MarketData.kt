@@ -4,7 +4,21 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.Serializable
 import java.time.Instant
 
-@Serializable
+enum class MarketStatus {
+    ONLINE,
+    OFFLINE,
+    POST_ONLY,
+    CANCEL_ONLY,
+    CLOSE_ONLY
+}
+
+data class MarketInfo (
+    val symbol:String?,
+    val status: MarketStatus?,
+    val indexPrice: Float?,
+    val oraclePrice: Float?
+)
+
 data class Candle (
     val startTimestamp: Long,
     val lastUpdate: Long,
@@ -42,6 +56,8 @@ data class OrderBook (
 )
 
 interface MarketDataService {
+    suspend fun subscribeMarketInfo(): Flow<MarketInfo>
+    suspend fun unsubscribeMarketInfo()
     suspend fun subscribeTrades(symbol: String): Flow<Trade>
     suspend fun unsubscribeTrades(symbol: String)
     suspend fun subscribeOrderBook(symbol: String): Flow<OrderBook>

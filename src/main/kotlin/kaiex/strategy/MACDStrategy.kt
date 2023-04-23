@@ -15,7 +15,10 @@ import kotlin.math.abs
 class MACDStrategy(val symbol: String,
                    val fastPeriod:Int = 12,
                    val slowPeriod:Int = 26,
-                   val signalPeriod:Int = 9): Strategy("MACDStrategy:$symbol,$fastPeriod,$slowPeriod,$signalPeriod") {
+                   val signalPeriod:Int = 9): Strategy(
+    strategyId = "MACDStrategy:$symbol,$fastPeriod,$slowPeriod,$signalPeriod",
+    symbols = listOf(symbol),
+    parameters = mapOf("fastPeriod" to fastPeriod.toString(), "slowPeriod" to slowPeriod.toString(), "signalPeriod" to signalPeriod.toString())) {
 
     private val log: Logger = LoggerFactory.getLogger(javaClass.simpleName + ":" + strategyId)
 
@@ -26,8 +29,10 @@ class MACDStrategy(val symbol: String,
     private var lastCandle: Long? = null
     override val config = StrategyChartConfig(
         strategyId = strategyId,
-        strategyName = javaClass.simpleName,
+        strategyType = javaClass.simpleName,
         strategyDescription = "",
+        symbols = symbols,
+        parameters = parameters,
         chartConfig = listOf(
             ChartSeriesConfig("price", "candle", 0, "#00FF00"),
             ChartSeriesConfig("histogram", "histogram", 1, "#26a69a"),

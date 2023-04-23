@@ -2,7 +2,6 @@ package kaiex.ui
 
 import kaiex.model.OrderFill
 import kaiex.model.OrderUpdate
-import kaiex.model.Position
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -32,8 +31,10 @@ data class StrategyMarketDataUpdateMessage(
 @Serializable
 data class StrategyChartConfig(
     val strategyId: String,
-    val strategyName: String,
+    val strategyType: String,
     val strategyDescription: String,
+    val symbols: List<String>,
+    val parameters: Map<String, String>,
     val chartConfig: List<ChartSeriesConfig>
 )
 
@@ -46,7 +47,19 @@ data class ChartSeriesConfig(
 )
 
 @Serializable
+class StrategyPosition(val symbol: String,
+                       val positionSize: Float,
+                       val avgEntryPrice: Float,
+                       val avgExitPrice: Float,
+                       val realizedPnl: Float,
+                       val unrealizedPnl: Float,
+                       val marketPrice: Float)
+
+@Serializable
 data class StrategySnapshot(val strategyId:String,
+                            val strategyType:String,
+                            val symbols:List<String>,
+                            val parameters:Map<String, String>,
                             val timestamp: Long,
                             val profitAndLoss: Float,
                             val numberOfTrades: Int,
@@ -56,7 +69,7 @@ data class StrategySnapshot(val strategyId:String,
                             val marketData: Map<String, Float>,
                             val orders: Map<String, OrderUpdate>,
                             val fills: Map<String, OrderFill>,
-                            val positions: Map<String, Position>)
+                            val positions: Map<String, StrategyPosition>)
 
 @Serializable
 data class StrategyMarketDataUpdate(
