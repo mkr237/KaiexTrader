@@ -14,8 +14,10 @@ class BuyAndHoldStrategy: KaiexBaseStrategy() {
     override suspend fun onStrategyCreate() {
         log.info("onStrategyCreate()")
         symbol = config.symbols[0]
-        //delay(5000)     // TODO Why?
-        //buyAtMarket(symbol = symbol!!, size = 0.01f)
+
+        // buy and HODL
+        delay(5000)
+        buyAtMarket(symbol!!, 0.01f)
     }
 
     override fun onStrategyMarketData(snapshot: MarketDataSnapshot) {

@@ -1,5 +1,6 @@
 package kaiex.exchange.simulator
 
+import com.fersoft.types.Order
 import kaiex.exchange.ExchangeService
 import kaiex.exchange.simulator.adapters.BinanceAdapter
 import kaiex.model.*
@@ -10,15 +11,25 @@ import kotlinx.coroutines.flow.onEach
 import org.koin.core.component.KoinComponent
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.time.Instant
+import java.util.UUID
+import java.util.concurrent.ArrayBlockingQueue
 
 class SimulatorService: KoinComponent, ExchangeService {
 
     private val log: Logger = LoggerFactory.getLogger(javaClass.simpleName)
+    private val exchangeName = "SIM"
     private var lastTradePrice = 0f
+    private val orderUpdates = ArrayBlockingQueue<OrderUpdate>(1)
+    private val orderFills = ArrayBlockingQueue<OrderFill>(1)
 
     override suspend fun subscribeAccountUpdates(accountId: String): Flow<AccountUpdate> {
         return flow {
-            AccountUpdate("0", listOf(), listOf(), listOf())
+            while(true) {
+                val orderUpdate = orderUpdates.take()
+                val orderFill = orderFills.take()
+                emit(AccountUpdate(accountId, listOf(orderUpdate), listOf(orderFill), listOf()))
+            }
         }
     }
 
@@ -68,6 +79,38 @@ class SimulatorService: KoinComponent, ExchangeService {
     }
 
     override suspend fun createOrder(order: CreateOrder): Result<String> {
-        TODO("Not yet implemented")
+
+        val fillPrice = lastTradePrice
+        val update = OrderUpdate(
+            order.orderId,
+            "exchangeName",
+            "0",
+            order.symbol,
+            order.type,
+            order.side,
+            order.price,
+            order.size,
+            0f,
+            OrderStatus.FILLED,
+            order.timeInForce,
+            order.createdAt,
+            order.createdAt + 1000L)
+
+        val fill = OrderFill(
+            UUID.randomUUID().toString(),
+            order.orderId,
+            order.symbol,
+            order.type,
+            order.side,
+            fillPrice,
+            order.size,
+            0f,
+            OrderRole.TAKER,
+            order.createdAt,
+            Instant.now().epochSecond)
+
+        orderUpdates.put(update)
+        orderFills.put(fill)
+        return Result.success(order.orderId)
     }
 }
