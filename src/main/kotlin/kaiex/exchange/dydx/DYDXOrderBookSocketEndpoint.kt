@@ -145,7 +145,7 @@ class DYDXOrderBookSocketEndpoint(private val symbol:String): DYDXSocketEndpoint
                     val json = (it as? Frame.Text)?.readText() ?: ""
                     when(val dydxOrderBookUpdate = Json.decodeFromString<Message>(json)) {
                         is Connected -> onConnected(dydxOrderBookUpdate)
-                        is Subscribed-> emit(onSubscribed(dydxOrderBookUpdate))
+                        is Subscribed -> emit(onSubscribed(dydxOrderBookUpdate))
                         is ChannelData -> {
                             onChannelData(dydxOrderBookUpdate)
                             //if(Instant.now() > lastSendTime + Duration.ofSeconds(2)) {

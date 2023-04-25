@@ -2,21 +2,15 @@ package kaiex.strategy
 
 import kaiex.core.MarketDataManager
 import kaiex.core.OrderManager
-import kaiex.exchange.dydx.DYDXExchangeService
 import kaiex.model.*
 import kaiex.ui.*
-import kaiex.util.EventBroadcaster
 import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.flowOf
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import toCandles
 import java.time.Instant
-import java.util.concurrent.Flow
 
 /**
  * The base class for all strategies. Performs lifecycle activities, subscribes
@@ -95,9 +89,17 @@ abstract class KaiexBaseStrategy : KoinComponent, KaiexStrategy {
         }
     }
 
+    private suspend fun subscribeTrades(symbol: String) {
+        marketDataManager.subscribeTrades(symbol).listenForEvents().collect { trade ->
+            log.debug("Received trade: $trade")
+            // TODO
+            //uiServer.send(StrategyMarketDataUpdate(config.strategyId, candle.startTimestamp, updates))
+        }
+    }
+
     private suspend fun subscribeCandles(symbol: String) {
-        marketDataManager.subscribeTrades(symbol).listenForEvents().toCandles().collect { candle ->
-            log.debug("Received candle: $candle")
+        marketDataManager.subscribeCandles(symbol).listenForEvents().collect { candle ->
+            log.info("Received candle: $candle")
             val updates = listOf(SeriesUpdate.CandleUpdate(
                 "price",
                 candle.open.toDouble(),

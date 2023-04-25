@@ -1,37 +1,37 @@
 package kaiex.core
 
+import kaiex.exchange.ExchangeService
 import kaiex.exchange.dydx.DYDXExchangeService
 import kaiex.model.*
+import kaiex.ui.SeriesUpdate
 import kaiex.util.EventBroadcaster
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import toCandles
 import kotlin.collections.set
 
 class MarketDataManager : KoinComponent {
 
     private val log: Logger = LoggerFactory.getLogger(javaClass.simpleName)
-    private val dydxExchangeService : DYDXExchangeService by inject()
+    private val exchangeService: ExchangeService by inject()
 
     // TODO maintain a refCount to allow unsubscribes
     private val marketInfoBroadcasters:MutableMap<String, EventBroadcaster<MarketInfo>> = mutableMapOf()
     private val tradeBroadcasters:MutableMap<String, EventBroadcaster<Trade>> = mutableMapOf()
+    private val candleBroadcasters:MutableMap<String, EventBroadcaster<Candle>> = mutableMapOf()
     private val orderBookBroadcasters:MutableMap<String, EventBroadcaster<OrderBook>> = mutableMapOf()
-
-    private val tradeSubscriptions:MutableMap<String, Flow<Trade>> = mutableMapOf()
 
     init {
         log.info("Starting")
         CoroutineScope(Dispatchers.Default).launch {// TODO launch with a launch!
             launch {
-                dydxExchangeService.subscribeMarketInfo().collect { marketInfo: MarketInfo ->
+                exchangeService.subscribeMarketInfo().collect { marketInfo: MarketInfo ->
                     if(marketInfoBroadcasters.containsKey(marketInfo.symbol)) {
                         marketInfoBroadcasters[marketInfo.symbol]?.sendEvent(marketInfo)
                     }
@@ -59,12 +59,8 @@ class MarketDataManager : KoinComponent {
             log.info("Subscribing to trades for $symbol")
             tradeBroadcasters[symbol] = EventBroadcaster()
             CoroutineScope(Dispatchers.Default).launch {
-                dydxExchangeService.subscribeTrades((symbol)).collect { trade:Trade ->
+                exchangeService.subscribeTrades((symbol)).collect { trade:Trade ->
                     tradeBroadcasters[symbol]?.sendEvent(trade)
-                }
-                while(true) {
-                    delay(5000)
-                    println("HERE")
                 }
             }
         } else {
@@ -78,11 +74,29 @@ class MarketDataManager : KoinComponent {
         // TODO Not Implemented
     }
 
+    fun subscribeCandles(symbol: String): EventBroadcaster<Candle> {
+        if(!candleBroadcasters.containsKey(symbol)) {
+            log.info("Subscribing to candles for $symbol")
+            candleBroadcasters[symbol] = EventBroadcaster()
+            CoroutineScope(Dispatchers.Default).launch {
+                subscribeTrades(symbol).listenForEvents().toCandles().collect { candle ->
+                    candleBroadcasters[symbol]?.sendEvent(candle)
+                }
+            }
+
+        } else {
+            log.info("Candle subscription exists for $symbol")
+        }
+
+        return candleBroadcasters[symbol] ?: throw RuntimeException("Unknown Symbol: $symbol")
+    }
+
     fun subscribeOrderBook(symbol: String): EventBroadcaster<OrderBook> {
         if(!orderBookBroadcasters.containsKey(symbol)) {
+            log.info("Subscribing to order book for $symbol")
             orderBookBroadcasters[symbol] = EventBroadcaster()
             CoroutineScope(Dispatchers.Default).launch {
-                dydxExchangeService.subscribeOrderBook((symbol)).collect { ob: OrderBook ->
+                exchangeService.subscribeOrderBook((symbol)).collect { ob: OrderBook ->
                     orderBookBroadcasters[symbol]?.sendEvent((ob))
                 }
             }

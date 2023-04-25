@@ -1,5 +1,6 @@
 package kaiex.core
 
+import kaiex.exchange.ExchangeService
 import kaiex.exchange.dydx.DYDXExchangeService
 import kaiex.model.AccountUpdate
 import kaiex.util.EventBroadcaster
@@ -14,7 +15,7 @@ import org.slf4j.LoggerFactory
 class AccountManager : KoinComponent {
 
     private val log: Logger = LoggerFactory.getLogger(javaClass.simpleName)
-    private val dydxExchangeService : DYDXExchangeService by inject()
+    private val exchangeService : ExchangeService by inject()
 
     private val accountBroadcasters:MutableMap<String, EventBroadcaster<AccountUpdate>> = mutableMapOf()
 
@@ -23,7 +24,7 @@ class AccountManager : KoinComponent {
             log.info("Subscribing to account updates for account:$accountId")
             accountBroadcasters[accountId] = EventBroadcaster()
             CoroutineScope(Dispatchers.Default).launch {
-                dydxExchangeService.subscribeAccountUpdates((accountId)).collect { update:AccountUpdate ->
+                exchangeService.subscribeAccountUpdates((accountId)).collect { update:AccountUpdate ->
                     accountBroadcasters[accountId]?.sendEvent(update)
                 }
             }

@@ -47,7 +47,7 @@ class DYDXAccountSocketEndpoint: DYDXSocketEndpoint<AccountUpdate> {
     ) : Message() {
         @Serializable
         data class Contents(val orders: List<Order>? = emptyList(),
-                            val account:Account,
+                            val account: Account,
                             val transfers: List<Transfer>? = emptyList(),
                             val fundingPayments: List<FundingPayment>? = emptyList())
     }

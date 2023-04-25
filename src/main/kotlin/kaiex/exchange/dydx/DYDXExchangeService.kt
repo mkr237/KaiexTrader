@@ -1,5 +1,6 @@
 package kaiex.exchange.dydx
 
+import kaiex.exchange.ExchangeService
 import kaiex.model.*
 import kaiex.util.Resource
 import kotlinx.coroutines.flow.Flow
@@ -11,7 +12,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 
-class DYDXExchangeService: KoinComponent, MarketDataService, OrderService, AccountService {
+class DYDXExchangeService: KoinComponent, ExchangeService {
 
     private val log: Logger = LoggerFactory.getLogger(javaClass.simpleName)
 
@@ -90,6 +91,14 @@ class DYDXExchangeService: KoinComponent, MarketDataService, OrderService, Accou
     }
 
     override suspend fun unsubscribeTrades(symbol: String) {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun subscribeCandles(symbol: String): Flow<Candle> {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun unsubscribeCandles(symbol: String) {
         TODO("Not yet implemented")
     }
 
@@ -174,7 +183,7 @@ class DYDXExchangeService: KoinComponent, MarketDataService, OrderService, Accou
         }
     }
 
-    override suspend fun unsubscribeAccountUpdate(): Flow<AccountUpdate> {
+    override suspend fun unsubscribeAccountUpdate() {
         TODO("Not yet implemented")
     }
 }

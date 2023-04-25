@@ -14,5 +14,5 @@ data class AccountUpdate(
 
 interface AccountService {
     suspend fun subscribeAccountUpdates(accountId: String): Flow<AccountUpdate>
-    suspend fun unsubscribeAccountUpdate(): Flow<AccountUpdate>
+    suspend fun unsubscribeAccountUpdate()
 }

@@ -1,8 +1,6 @@
 package kaiex.exchange.dydx
 
 import kaiex.model.CreateOrder
-import kaiex.util.Resource
-import kotlinx.coroutines.flow.Flow
 
 interface DYDXHttpEndpoint<T> {
 

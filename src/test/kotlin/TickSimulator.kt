@@ -1,12 +1,10 @@
-import kaiex.core.format
 import kaiex.indicator.MACD
 import kaiex.ui.UIServer
-import kaiex.util.BinanceAdapter
-import kaiex.util.TickPlayer
+import kaiex.exchange.simulator.TickPlayer
+import kaiex.exchange.simulator.adapters.BinanceAdapter
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
-import kotlinx.serialization.encodeToString as myJsonEncode
 
 suspend fun main() {
 

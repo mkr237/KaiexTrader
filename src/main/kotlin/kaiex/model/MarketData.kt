@@ -133,6 +133,8 @@ interface MarketDataService {
     suspend fun unsubscribeMarketInfo()
     suspend fun subscribeTrades(symbol: String): Flow<Trade>
     suspend fun unsubscribeTrades(symbol: String)
+    suspend fun subscribeCandles(symbol: String): Flow<Candle>
+    suspend fun unsubscribeCandles(symbol: String)
     suspend fun subscribeOrderBook(symbol: String): Flow<OrderBook>
     suspend fun unsubscribeOrderBook(symbol: String)
 }

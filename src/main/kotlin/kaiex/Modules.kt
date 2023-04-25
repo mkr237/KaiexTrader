@@ -1,7 +1,9 @@
 package kaiex
 
 import kaiex.core.*
+import kaiex.exchange.ExchangeService
 import kaiex.exchange.dydx.*
+import kaiex.exchange.simulator.SimulatorService
 import kaiex.ui.UIServer
 import org.koin.dsl.module
 
@@ -25,11 +27,15 @@ val dydxExchangeService = module {
         throw IllegalStateException(missingVarsMessage)
     }
 
-    single { DYDXExchangeService() }
+    single<ExchangeService> { DYDXExchangeService() }
     factory { DYDXMarketsSocketEndpoint() }
     factory { DYDXAccountSocketEndpoint() }
     factory { params -> DYDXTradeSocketEndpoint(symbol = params.get()) }
     factory { params -> DYDXOrderBookSocketEndpoint(symbol = params.get()) }
     factory { DYDXOrderEndpoint() }
     // props can be used with getProperty("my_property")
+}
+
+val binanceExchangeSimulator = module {
+    single<ExchangeService> { SimulatorService() }
 }

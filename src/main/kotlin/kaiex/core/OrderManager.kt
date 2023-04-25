@@ -1,5 +1,6 @@
 package kaiex.core
 
+import kaiex.exchange.ExchangeService
 import kaiex.exchange.dydx.DYDXExchangeService
 import kaiex.model.*
 import kotlinx.coroutines.*
@@ -14,7 +15,7 @@ import java.util.UUID
 class OrderManager : KoinComponent {
 
     private val log: Logger = LoggerFactory.getLogger(javaClass.simpleName)
-    private val dydxExchangeService : DYDXExchangeService by inject()
+    private val exchangeService: ExchangeService by inject()
     private val accountManager : AccountManager by inject()
 
     // Need these?
@@ -134,6 +135,6 @@ class OrderManager : KoinComponent {
         )
 
         log.info("Creating new order: $order")
-        return dydxExchangeService.createOrder(order)
+        return exchangeService.createOrder(order)
     }
 }

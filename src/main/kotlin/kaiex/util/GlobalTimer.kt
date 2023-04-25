@@ -32,7 +32,3 @@ object GlobalTimer {
         return nextMinute
     }
 }
-
-//GlobalTimer.scheduleAtFixedRate(0, 1000) {
-//    println("Hello, world!")
-//}

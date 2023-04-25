@@ -1,4 +1,5 @@
 import kaiex.StrategyRunner
+import kaiex.binanceExchangeSimulator
 import kaiex.core
 import kaiex.dydxExchangeService
 import kaiex.ui.ChartSeriesConfig
@@ -55,5 +56,15 @@ fun runStrategy(config: StrategyConfig) {
 }
 
 fun backtestStrategy(config: StrategyConfig) {
-    log.error("Backtesting not implemented")
+    log.info("Backtesting strategy ${config.strategyType}")
+    startKoin{
+        //printLogger(Level.INFO)
+        //fileProperties()
+        modules(binanceExchangeSimulator)
+        modules(core)
+    }
+
+    val runner = StrategyRunner(config)
+    runner.start()
+    runner.stop()
 }
