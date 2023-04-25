@@ -1,11 +1,11 @@
 package kaiex.indicator
 
-class EMA(private val period: Int) {
+class EMA(private val period: Int):Indicator {
 
     private var value: Double = 0.0
     private var alpha: Double = 0.0
 
-    fun update(price: Double) {
+    override fun update(price: Double) {
         if (value == 0.0) {
             value = price
             alpha = 2.0 / (period + 1.0)

@@ -181,11 +181,11 @@ class DYDXMarketsSocketEndpoint: DYDXSocketEndpoint<MarketInfo> {
         log.debug("Subscribed to $message")
         markets = mutableMapOf()
         message.contents.markets.forEach {
-            val marketInfo = MarketInfo(
-                symbol = it.value.market,
-                status = MarketStatus.valueOf(it.value.status ?: ""),
-                indexPrice = it.value.indexPrice?.toFloatOrNull(),
-                oraclePrice = it.value.oraclePrice?.toFloatOrNull()
+            val marketInfo = kaiex.model.MarketInfo(
+                symbol = it.key,
+                status = parseMarketStatus(it.value.status!!),
+                indexPrice = it.value.indexPrice?.toFloat() ?: 0f,
+                oraclePrice = it.value.oraclePrice?.toFloat() ?: 0f
             )
             markets[it.key] = marketInfo
         }
@@ -193,22 +193,27 @@ class DYDXMarketsSocketEndpoint: DYDXSocketEndpoint<MarketInfo> {
         return markets.values.toList()
     }
 
+    fun parseMarketStatus(statusStr: String): MarketStatus {
+        return try {
+            MarketStatus.valueOf(statusStr)
+        } catch (e: IllegalArgumentException) {
+            MarketStatus.OFFLINE
+        }
+    }
+
     private fun onChannelData(message: ChannelData):List<kaiex.model.MarketInfo> {
         log.debug("Received channel data for $message")
-        message.contents.forEach {
-            if(markets.containsKey(it.key)) {
+        message.contents.forEach { update ->
+            if(markets.containsKey(update.key)) {
                 val marketInfo = MarketInfo(
-                    symbol = it.key,
-                    status = MarketStatus.valueOf(it.value.status ?: markets[it.key]?.status.toString()),
-                    indexPrice = it.value.indexPrice?.toFloatOrNull(),
-                    oraclePrice = it.value.oraclePrice?.toFloatOrNull()
+                    symbol = update.key,
+                    status = MarketStatus.valueOf(update.value.status ?: markets[update.key]?.status.toString()),
+                    indexPrice = update.value.indexPrice?.toFloatOrNull() ?: markets[update.key]?.indexPrice!!,
+                    oraclePrice = update.value.oraclePrice?.toFloatOrNull() ?: markets[update.key]?.oraclePrice!!
                 )
-                markets[it.key] = marketInfo
+                markets[update.key] = marketInfo
 
             }
-//            else {
-//                log.warn("Received market info for an unknown symbol: ${it.key}")
-//            }
         }
 
         return markets.filterKeys { it in message.contents.keys }.values.toList()

@@ -1,12 +1,12 @@
 package kaiex.indicator
 
-class MACD(private val fastPeriod: Int, private val slowPeriod: Int, private val signalPeriod: Int) {
+class MACD(private val fastPeriod: Int, private val slowPeriod: Int, private val signalPeriod: Int):Indicator {
 
     private var fastMA: EMA = EMA(fastPeriod)
     private var slowMA: EMA = EMA(slowPeriod)
     private var signalMA: EMA = EMA(signalPeriod)
 
-    fun update(price: Double) {
+    override fun update(price: Double) {
         fastMA.update(price)
         slowMA.update(price)
 

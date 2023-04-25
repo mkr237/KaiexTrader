@@ -1,5 +1,6 @@
 package kaiex.strategy
 
+import kaiex.model.MarketDataSnapshot
 import kaiex.model.OrderUpdate
 import kaiex.ui.StrategyConfig
 

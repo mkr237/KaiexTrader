@@ -37,6 +37,8 @@ abstract class KaiexBaseStrategy : KoinComponent, KaiexStrategy {
     private val positions : MutableMap<String, PositionTracker> = mutableMapOf()  // by symbol
     protected var config:StrategyConfig = StrategyConfig()
 
+    private val marketDataSnapshot = MarketDataSnapshot()
+
     /**
      * Lifecycle functions
      */
@@ -59,7 +61,7 @@ abstract class KaiexBaseStrategy : KoinComponent, KaiexStrategy {
 
     override fun onMarketData() {
         log.info("onMarketData()")
-        onStrategyMarketData()
+        onStrategyMarketData(marketDataSnapshot)
     }
 
     override fun onOrderUpdate(update: OrderUpdate) {
@@ -73,7 +75,7 @@ abstract class KaiexBaseStrategy : KoinComponent, KaiexStrategy {
     }
 
     abstract suspend fun onStrategyCreate()
-    abstract fun onStrategyMarketData()
+    abstract fun onStrategyMarketData(snapshot: MarketDataSnapshot)
     abstract fun onStrategyOrderUpdate(update: OrderUpdate)
     abstract suspend fun onStrategyDestroy()
 
@@ -83,16 +85,19 @@ abstract class KaiexBaseStrategy : KoinComponent, KaiexStrategy {
     private suspend fun subscribeMarketDataInfo(symbol: String) {
         marketDataManager.subscribeMarketInfo(symbol).listenForEvents().collect { marketInfo ->
             if(marketInfo.indexPrice != null) {
-                log.info("Received market info: $marketInfo")
+                log.debug("Received market info: $marketInfo")
                 positions[symbol]!!.updatePrice(marketInfo.indexPrice)
                 sendStrategySnapshot()
             }
+
+            marketDataSnapshot.updateMarketInfo(marketInfo)
+            onStrategyMarketData(marketDataSnapshot)
         }
     }
 
     private suspend fun subscribeCandles(symbol: String) {
         marketDataManager.subscribeTrades(symbol).listenForEvents().toCandles().collect { candle ->
-            log.info("Received candle: $candle")
+            log.debug("Received candle: $candle")
             val updates = listOf(SeriesUpdate.CandleUpdate(
                 "price",
                 candle.open.toDouble(),
@@ -100,18 +105,22 @@ abstract class KaiexBaseStrategy : KoinComponent, KaiexStrategy {
                 candle.low.toDouble(),
                 candle.close.toDouble())
             )
+
+            marketDataSnapshot.updateCandle(candle)
+            onStrategyMarketData(marketDataSnapshot)
+
             uiServer.send(StrategyMarketDataUpdate(config.strategyId, candle.startTimestamp, updates))
         }
     }
 
     protected suspend fun subscribeOrderBook(symbol: String) {
-        marketDataManager.subscribeOrderBook(symbol).listenForEvents().collect { update ->
-            log.info("Received order book update: $update")
-            val bestBid = update.bids[0].price.toDouble()
-            val bestAsk = update.asks[0].price.toDouble()
+        marketDataManager.subscribeOrderBook(symbol).listenForEvents().collect { orderBook ->
+            log.debug("Received order book: $orderBook")
+            val bestBid = orderBook.bids[0].price.toDouble()
+            val bestAsk = orderBook.asks[0].price.toDouble()
             //val midPrice = bestBid + ((bestAsk - bestBid) / 2)
             val updates = listOf(SeriesUpdate.NumericUpdate("best-bid", bestBid), SeriesUpdate.NumericUpdate("best-ask", bestAsk))
-            uiServer.send(StrategyMarketDataUpdate(config.strategyId, update.receivedAt.epochSecond, updates))
+            uiServer.send(StrategyMarketDataUpdate(config.strategyId, orderBook.receivedAt.epochSecond, updates))
         }
     }
 

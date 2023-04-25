@@ -1,5 +1,6 @@
 package kaiex.strategy
 
+import kaiex.model.MarketDataSnapshot
 import kaiex.model.OrderUpdate
 import kotlinx.coroutines.delay
 
@@ -8,18 +9,25 @@ import kotlinx.coroutines.delay
  */
 class BuyAndHoldStrategy: KaiexBaseStrategy() {
 
+    private var symbol:String? = null
+
     override suspend fun onStrategyCreate() {
         log.info("onStrategyCreate()")
-        delay(5000)     // TODO Why?
-        buyAtMarket(symbol = config.symbols[0], size = 0.01f)
+        symbol = config.symbols[0]
+        //delay(5000)     // TODO Why?
+        //buyAtMarket(symbol = symbol!!, size = 0.01f)
     }
 
-    override fun onStrategyMarketData() {
-        log.info("onStrategyMarketData()")
+    override fun onStrategyMarketData(snapshot: MarketDataSnapshot) {
+        log.info("*** Received market data snapshot ***")
+        log.info("Market Data Info: ${snapshot.getMarketInfo(symbol!!) ?: "-"}")
+        log.info("Candles: ${snapshot.getCandles(symbol!!).lastOrNull() ?: "-"}")
+        log.info("Order Book: ${snapshot.getOrderBooks(symbol!!).lastOrNull() ?: "-"}")
     }
 
     override fun onStrategyOrderUpdate(update: OrderUpdate) {
-        log.info("onStrategyOrderUpdate()")
+        log.info("*** Received order update ***")
+        log.info("Order Update: $update")
     }
 
     override suspend fun onStrategyDestroy() {
