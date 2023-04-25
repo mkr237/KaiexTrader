@@ -1,63 +1,54 @@
 package kaiex.strategy
 
 import kaiex.indicator.MACD
-import kaiex.model.Candle
+import kaiex.model.MarketDataSnapshot
 import kaiex.model.OrderSide
-import kaiex.model.OrderTimeInForce
-import kaiex.model.OrderType
+import kaiex.model.OrderUpdate
 import kaiex.ui.ChartSeriesConfig
 import kaiex.ui.SeriesUpdate
 import kaiex.ui.StrategyConfig
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
+import kaiex.ui.StrategyMarketDataUpdate
+import kotlinx.coroutines.delay
 import kotlin.math.abs
 
-class MACDStrategy(val symbol: String,
-                   val fastPeriod:Int = 12,
-                   val slowPeriod:Int = 26,
-                   val signalPeriod:Int = 9): Strategy(
-    strategyId = "MACDStrategy:$symbol,$fastPeriod,$slowPeriod,$signalPeriod",
-    symbols = listOf(symbol),
-    parameters = mapOf("fastPeriod" to fastPeriod.toString(), "slowPeriod" to slowPeriod.toString(), "signalPeriod" to signalPeriod.toString())) {
+/**
+ * Simple MACD Strategy
+ */
+class MACDStrategy: KaiexBaseStrategy() {
 
-    private val log: Logger = LoggerFactory.getLogger(javaClass.simpleName + ":" + strategyId)
-
-    private val macd = MACD(fastPeriod, slowPeriod, signalPeriod)
-    private val maxLong = 0.002f
-    private val maxShort = -0.002f
-
-    private var lastCandle: Long? = null
-    override val config = StrategyConfig(
-        strategyId = strategyId,
-        strategyType = javaClass.simpleName,
-        strategyDescription = "",
-        symbols = symbols,
-        parameters = parameters,
-        chartConfig = listOf(
-            ChartSeriesConfig("price", "candle", 0, "#00FF00"),
-            ChartSeriesConfig("histogram", "histogram", 1, "#26a69a"),
-            ChartSeriesConfig("macd", "line", 1, "#2196F3"),
-            ChartSeriesConfig("signal", "line", 1, "#FC6C02")
+    companion object {
+        val config = StrategyConfig(
+            strategyId = "MACDStrategy:BTC-USD",
+            strategyType = "kaiex.strategy.MACDStrategy",
+            strategyDescription = "Simple MACD Strategy",
+            symbols = listOf("BTC-USD"),
+            parameters = mapOf(),
+            chartConfig = listOf(
+                ChartSeriesConfig("price", "candle", 0, "#00FF00"),
+                ChartSeriesConfig("histogram", "histogram", 1, "#26a69a"),
+                ChartSeriesConfig("macd", "line", 1, "#2196F3"),
+                ChartSeriesConfig("signal", "line", 1, "#FC6C02")
+            )
         )
-    )
-
-    override fun onStart() {
-        log.info("onStart()")
-        subscribeCandles(symbol) { candle -> onNewCandle(candle) }
     }
 
-    override fun onUpdate() {
-        log.info("onUpdate()")
+    private var symbol:String? = null
+    private val macd = MACD(12, 26, 9)
+    private val positionSize = 0.02f
+    private var lastCandle: Long? = null
+
+    override fun onStrategyCreate() {
+        log.info("onStrategyCreate()")
+        symbol = config.symbols[0]
     }
 
-    override fun onStop() {
-        log.info("onStop()")
-    }
+    override fun onStrategyMarketData(snapshot: MarketDataSnapshot) {
+        //log.info("Candle: ${snapshot.getCandles(symbol!!).lastOrNull() ?: "-"}")
 
-    private fun onNewCandle(candle: Candle) {
-        log.info("Received Candle: $candle")
+        val candle = snapshot.getCandles(symbol!!).lastOrNull()
 
-        if(candle.startTimestamp != lastCandle) {
+        if(candle != null && candle.startTimestamp != lastCandle) {
+
             macd.update(candle.close.toDouble())
             val macdLine = macd.getMACDLine()
             val signalLine = macd.getSignalLine()
@@ -65,23 +56,10 @@ class MACDStrategy(val symbol: String,
 
             if (!candle.historical && macdLine > signalLine) {
                 log.info("Detected LONG signal - MACD: $macdLine > Signal: $signalLine")
-                val currentPosition = getCurrentPosition(symbol)
-                if(currentPosition < maxLong) {
-                    log.info("Current position: $currentPosition - BUYING ${maxLong - currentPosition}")
-                    createOrder(candle.close, OrderSide.BUY, maxLong - currentPosition)
-                } else {
-                    log.info("Already at or above MAX_LONG")
-                }
-
+                setPosition(symbol!!, positionSize)
             } else if (!candle.historical && macdLine < signalLine) {
                 log.info("Detected SHORT signal - MACD: $macdLine < Signal: $signalLine\"")
-                val currentPosition = getCurrentPosition(symbol)
-                if(currentPosition > maxShort) {
-                    log.info("Current position: $currentPosition - SELLING ${abs(maxShort - currentPosition)}")
-                    createOrder(candle.close, OrderSide.SELL, abs(maxShort - currentPosition))
-                } else {
-                    log.info("Already at or below MAX_SHORT")
-                }
+                setPosition(symbol!!, -positionSize)
             }
 
             val updates = listOf(
@@ -90,25 +68,17 @@ class MACDStrategy(val symbol: String,
                 SeriesUpdate.NumericUpdate(id = "histogram", value = histogram)
             )
 
-            sendStrategyMarketDataUpdate(candle.lastUpdate, updates)
+            uiServer.send(StrategyMarketDataUpdate(config.strategyId, candle.startTimestamp, updates))
             lastCandle = candle.startTimestamp
         }
-
-        val updates = listOf(SeriesUpdate.CandleUpdate("price", candle.open.toDouble(), candle.high.toDouble(),
-            candle.low.toDouble(), candle.close.toDouble()))
-
-        sendStrategyMarketDataUpdate(candle.lastUpdate, updates)
     }
 
-    private fun createOrder(price: Float, side: OrderSide, size: Float) {
-        createOrder(
-            symbol,
-            OrderType.MARKET,
-            side,
-            price,
-            size,
-            0.015f,
-            OrderTimeInForce.FOK
-        )
+    override fun onStrategyOrderUpdate(update: OrderUpdate) {
+        log.info("*** Received order update ***")
+        log.info("Order Update: $update")
+    }
+
+    override fun onStrategyDestroy() {
+        log.info("onStop()")
     }
 }

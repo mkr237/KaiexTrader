@@ -5,6 +5,7 @@ import kaiex.model.*
 import kaiex.util.Resource
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.runBlocking
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import org.koin.core.parameter.parametersOf
@@ -141,12 +142,12 @@ class DYDXExchangeService: KoinComponent, ExchangeService {
     /**
      * Order Service
      */
-    override suspend fun createOrder(order: CreateOrder):Result<String> {
+    override fun createOrder(order: CreateOrder):Result<String> {
 
         val service : DYDXOrderEndpoint by inject()
 
         log.info("Creating order: $order")
-        return service.post(order)
+        return runBlocking { service.post(order) }
     }
 
     /**

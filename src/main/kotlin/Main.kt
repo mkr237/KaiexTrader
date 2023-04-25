@@ -2,6 +2,8 @@ import kaiex.StrategyRunner
 import kaiex.binanceExchangeSimulator
 import kaiex.core
 import kaiex.dydxExchangeService
+import kaiex.strategy.BuyAndHoldStrategy
+import kaiex.strategy.MACDStrategy
 import kaiex.ui.ChartSeriesConfig
 import kaiex.ui.StrategyConfig
 import org.koin.core.context.startKoin
@@ -21,18 +23,7 @@ fun main(args: Array<String>) {
     val configFile = args[1]
 
     // TODO load from specified configFile
-    val config = StrategyConfig(
-        strategyId = "BuyAndHoldStrategy:BTC-USD",
-        strategyType = "kaiex.strategy.BuyAndHoldStrategy",
-        strategyDescription = "Strategy that simply buys BTC-USD and HODLs",
-        symbols = listOf("BTC-USD"),
-        parameters = mapOf("foo" to "bar"),
-        chartConfig = listOf(
-            ChartSeriesConfig("price", "candle", 0, "#00FF00"),
-            ChartSeriesConfig("best-bid", "line", 0, "#2196F3"),
-            ChartSeriesConfig("best-ask", "line", 0, "#FC6C02")
-        )
-    )
+    val config= MACDStrategy.config
 
     when (command) {
         "run" -> runStrategy(config)

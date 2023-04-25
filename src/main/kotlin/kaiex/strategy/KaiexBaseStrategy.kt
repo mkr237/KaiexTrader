@@ -11,6 +11,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import toCandles
 import java.time.Instant
+import kotlin.math.absoluteValue
 
 /**
  * The base class for all strategies. Performs lifecycle activities, subscribes
@@ -24,7 +25,7 @@ abstract class KaiexBaseStrategy : KoinComponent, KaiexStrategy {
     private val orderManager : OrderManager by inject()
     //private val riskManager : RiskManager by inject()
     //private val reportManager : ReportManager by inject()
-    private val uiServer : UIServer by inject()
+    protected val uiServer : UIServer by inject()
 
     private val orders : MutableMap<String, OrderUpdate> = mutableMapOf() // by OrderId
     private val fills : MutableMap<String, MutableList<OrderFill>> = mutableMapOf()  // by orderId
@@ -32,6 +33,8 @@ abstract class KaiexBaseStrategy : KoinComponent, KaiexStrategy {
     protected var config:StrategyConfig = StrategyConfig()
 
     private val marketDataSnapshot = MarketDataSnapshot()
+
+    private val orderUpdatesScope = CoroutineScope(Dispatchers.Default)
 
     /**
      * Lifecycle functions
@@ -53,12 +56,12 @@ abstract class KaiexBaseStrategy : KoinComponent, KaiexStrategy {
         onStrategyCreate()
     }
 
-    override fun onMarketData() {
+    override suspend fun onMarketData() {
         log.info("onMarketData()")
         onStrategyMarketData(marketDataSnapshot)
     }
 
-    override fun onOrderUpdate(update: OrderUpdate) {
+    override suspend fun onOrderUpdate(update: OrderUpdate) {
         log.info("onOrderUpdate($update)")
         onStrategyOrderUpdate(update)
     }
@@ -68,10 +71,10 @@ abstract class KaiexBaseStrategy : KoinComponent, KaiexStrategy {
         onStrategyDestroy()
     }
 
-    abstract suspend fun onStrategyCreate()
+    abstract fun onStrategyCreate()
     abstract fun onStrategyMarketData(snapshot: MarketDataSnapshot)
     abstract fun onStrategyOrderUpdate(update: OrderUpdate)
-    abstract suspend fun onStrategyDestroy()
+    abstract fun onStrategyDestroy()
 
     /**
      * Market data functions
@@ -129,67 +132,75 @@ abstract class KaiexBaseStrategy : KoinComponent, KaiexStrategy {
     /**
      * Order management functions
      */
-    protected suspend fun buyAtMarket(symbol: String, size: Float) =
+    protected fun buyAtMarket(symbol: String, size: Float) =
         createOrder(symbol, OrderType.MARKET, OrderSide.BUY, 35000f, size, 0.015f, OrderTimeInForce.FOK)
-    protected suspend fun sellAtMarket(symbol: String, size: Float) =
+
+    protected fun sellAtMarket(symbol: String, size: Float) =
         createOrder(symbol, OrderType.MARKET, OrderSide.SELL, 25000f, size, 0.015f, OrderTimeInForce.FOK)
-    private suspend fun createOrder(symbol: String,
+
+    protected fun setPosition(symbol: String, target: Float) {
+        val orderSize = target - getCurrentPosition(symbol)
+        if(orderSize > 0)
+            createOrder(symbol, OrderType.MARKET, OrderSide.BUY, 35000f, orderSize.absoluteValue, 0.015f, OrderTimeInForce.FOK)
+        else if(orderSize < 0)
+            createOrder(symbol, OrderType.MARKET, OrderSide.SELL, 25000f, orderSize.absoluteValue, 0.015f, OrderTimeInForce.FOK)
+    }
+
+    private fun createOrder(symbol: String,
                                     type: OrderType,
                                     side: OrderSide,
                                     price: Float,
                                     size: Float,
                                     limitFee: Float,
-                                    timeInForce: OrderTimeInForce
-    ) {
+                                    timeInForce: OrderTimeInForce) {
 
-        coroutineScope {
-            orderManager.createOrder(symbol, type, side, price, size, limitFee, timeInForce).onSuccess { orderId ->
-                log.info("Successfully created order: $orderId")
+        orderManager.createOrder(symbol, type, side, price, size, limitFee, timeInForce).onSuccess { orderId ->
 
-                launch {
-                    // listen for order updates
-                    orderManager.subscribeOrderUpdates(orderId).collect { update ->
-                        log.info("Received update for order: $orderId: $update")
-                        orders[update.orderId] = update
-                        sendStrategySnapshot()
+            log.info("Successfully created order: $orderId")
 
-                        if(update.status == OrderStatus.FILLED) {
-                            log.info("Order ${update.orderId} is FILLED")
-                            throw CancellationException("Order ${update.orderId} is FILLED")
-                        }
+            orderUpdatesScope.launch {
+                // listen for order updates
+                orderManager.subscribeOrderUpdates(orderId).collect { update ->
+                    log.info("Received update for order: $orderId: $update")
+                    orders[update.orderId] = update
+                    sendStrategySnapshot()
+
+                    if(update.status == OrderStatus.FILLED) {
+                        log.info("Order ${update.orderId} is FILLED")
+                        throw CancellationException("Order ${update.orderId} is FILLED")
                     }
                 }
-
-                // TODO this coroutine will never end
-                launch {
-                    // listen for order fills
-                    orderManager.subscribeOrderFills(orderId).collect { fill ->
-
-                        if(!config.symbols.contains(fill.symbol)) {
-                            throw StrategyException("Received a fill for a unknown symbol: ${fill.symbol}")
-                        }
-
-                        log.info("Received fill for order: $orderId: $fill")
-                        if(!fills.containsKey(fill.orderId))
-                            fills[fill.orderId] = mutableListOf()
-                        fills[fill.orderId]?.add(fill)
-
-                        positions[symbol]!!.addTrade(fill)
-
-                        sendStrategySnapshot()
-                    }
-                }
-
-            }.onFailure { e ->
-                log.error("Failed to create order: $e")
             }
+
+            // TODO this coroutine will never end
+            orderUpdatesScope.launch {
+                // listen for order fills
+                orderManager.subscribeOrderFills(orderId).collect { fill ->
+
+                    if(!config.symbols.contains(fill.symbol)) {
+                        throw StrategyException("Received a fill for a unknown symbol: ${fill.symbol}")
+                    }
+
+                    log.info("Received fill for order: $orderId: $fill")
+                    if(!fills.containsKey(fill.orderId))
+                        fills[fill.orderId] = mutableListOf()
+                    fills[fill.orderId]?.add(fill)
+
+                    positions[symbol]!!.addTrade(fill)
+
+                    sendStrategySnapshot()
+                }
+            }
+
+        }.onFailure { e ->
+            log.error("Failed to create order: $e")
         }
     }
 
     /**
      * Misc. functions
      */
-    protected fun getCurrentPosition(symbol: String): Float {
+    private fun getCurrentPosition(symbol: String): Float {
         return positions[symbol]?.positionSize?.toFloat() ?: 0f
     }
 
@@ -201,7 +212,7 @@ abstract class KaiexBaseStrategy : KoinComponent, KaiexStrategy {
                 config.symbols,
                 config.parameters,
                 Instant.now().epochSecond,
-                86.2f,
+                23.2f,
                 23,
                 54f,
                 22f,

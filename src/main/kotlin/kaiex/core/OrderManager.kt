@@ -111,7 +111,7 @@ class OrderManager : KoinComponent {
         return positionSubscriptions[symbol]!!
     }
 
-    suspend fun createOrder(symbol: String,
+    fun createOrder(symbol: String,
                             type: OrderType,
                             side: OrderSide,
                             price: Float,

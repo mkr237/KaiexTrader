@@ -78,7 +78,7 @@ class SimulatorService: KoinComponent, ExchangeService {
         log.info("unsubscribeOrderBook")
     }
 
-    override suspend fun createOrder(order: CreateOrder): Result<String> {
+    override fun createOrder(order: CreateOrder): Result<String> {
 
         val fillPrice = lastTradePrice
         val update = OrderUpdate(

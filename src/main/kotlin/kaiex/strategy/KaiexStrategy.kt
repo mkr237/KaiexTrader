@@ -6,7 +6,7 @@ import kaiex.ui.StrategyConfig
 
 interface KaiexStrategy {
     suspend fun onCreate(config: StrategyConfig)
-    fun onMarketData()
-    fun onOrderUpdate(update: OrderUpdate)
+    suspend fun onMarketData()
+    suspend fun onOrderUpdate(update: OrderUpdate)
     suspend fun onDestroy()
 }
