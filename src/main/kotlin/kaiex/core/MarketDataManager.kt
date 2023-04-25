@@ -5,6 +5,9 @@ import kaiex.model.*
 import kaiex.util.EventBroadcaster
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
@@ -21,6 +24,8 @@ class MarketDataManager : KoinComponent {
     private val marketInfoBroadcasters:MutableMap<String, EventBroadcaster<MarketInfo>> = mutableMapOf()
     private val tradeBroadcasters:MutableMap<String, EventBroadcaster<Trade>> = mutableMapOf()
     private val orderBookBroadcasters:MutableMap<String, EventBroadcaster<OrderBook>> = mutableMapOf()
+
+    private val tradeSubscriptions:MutableMap<String, Flow<Trade>> = mutableMapOf()
 
     init {
         log.info("Starting")
@@ -56,6 +61,10 @@ class MarketDataManager : KoinComponent {
             CoroutineScope(Dispatchers.Default).launch {
                 dydxExchangeService.subscribeTrades((symbol)).collect { trade:Trade ->
                     tradeBroadcasters[symbol]?.sendEvent(trade)
+                }
+                while(true) {
+                    delay(5000)
+                    println("HERE")
                 }
             }
         } else {

@@ -13,7 +13,7 @@ sealed class Message {
 data class StrategyDescriptorMessage(
     override val sequenceNumber: Long,
     val type:String = "kaiex.ui.StrategyChartConfigMessage",  // TODO why?
-    val contents: StrategyChartConfig
+    val contents: StrategyConfig
 ):Message()
 
 @Serializable
@@ -29,13 +29,13 @@ data class StrategyMarketDataUpdateMessage(
 ):Message()
 
 @Serializable
-data class StrategyChartConfig(
-    val strategyId: String,
-    val strategyType: String,
-    val strategyDescription: String,
-    val symbols: List<String>,
-    val parameters: Map<String, String>,
-    val chartConfig: List<ChartSeriesConfig>
+data class StrategyConfig(
+    val strategyId: String = "",
+    val strategyType: String = "",
+    val strategyDescription: String = "",
+    val symbols: List<String> = emptyList(),
+    val parameters: Map<String, String> = emptyMap(),
+    val chartConfig: List<ChartSeriesConfig> = emptyList()
 )
 
 @Serializable

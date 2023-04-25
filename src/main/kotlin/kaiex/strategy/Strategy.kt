@@ -24,7 +24,7 @@ abstract class Strategy(val strategyId: String, val symbols:List<String>, val pa
     private val orders : MutableMap<String, OrderUpdate> = mutableMapOf() // by OrderId
     private val fills : MutableMap<String, MutableList<OrderFill>> = mutableMapOf()  // by orderId
     private val positions : MutableMap<String, PositionTracker> = mutableMapOf()  // by symbol
-    abstract val config : StrategyChartConfig
+    abstract val config : StrategyConfig
 
     init {
         symbols.forEach { positions[it] = PositionTracker() }
@@ -94,7 +94,7 @@ abstract class Strategy(val strategyId: String, val symbols:List<String>, val pa
 
                 launch {
                     // listen for order fills
-                    orderManager.subscribeOFills(orderId).collect { fill ->
+                    orderManager.subscribeOrderFills(orderId).collect { fill ->
 
                         if(!symbols.contains(fill.symbol)) {
                             throw StrategyException("Received a fill for a unknown symbol: ${fill.symbol}")

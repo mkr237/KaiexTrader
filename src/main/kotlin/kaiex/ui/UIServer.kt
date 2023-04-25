@@ -11,6 +11,7 @@ import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
 import io.ktor.websocket.*
 import kaiex.core.format
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import kotlinx.coroutines.launch
@@ -39,10 +40,14 @@ class UIServer : KoinComponent {
     private var sessionNumber = 0
     private var sequenceNumber = 0L
 
-    private var strategies = mutableMapOf<String, StrategyChartConfig>()
+    private var strategies = mutableMapOf<String, StrategyConfig>()
 
-    fun start() {
-        log.info("Starting...")
+    init {
+        GlobalScope.launch { start() }
+    }
+
+    private fun start() {
+        log.info("Starting")
 
         val server = embeddedServer(Netty, port = SERVER_PORT) {
             install(WebSockets)
@@ -136,7 +141,7 @@ class UIServer : KoinComponent {
         server.start(wait = true)
     }
 
-    fun register(config: StrategyChartConfig) {
+    fun register(config: StrategyConfig) {
         log.info("Registering strategy: $config")
         strategies[config.strategyId] = config
     }

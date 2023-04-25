@@ -302,6 +302,7 @@ class DYDXAccountSocketEndpoint: DYDXSocketEndpoint<AccountUpdate> {
                 ?.filter { it is Frame.Text }
                 ?.transform {
                     val json = (it as? Frame.Text)?.readText() ?: ""
+                    log.info(json)
                     when(val dydxAccountUpdate = Json.decodeFromString<Message>(json)) {
                         is Connected -> onConnected(dydxAccountUpdate)
                         is Subscribed -> emit(onSubscribed(dydxAccountUpdate))

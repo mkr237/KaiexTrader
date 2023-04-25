@@ -2,7 +2,7 @@ package kaiex.strategy
 
 import kaiex.model.OrderBook
 import kaiex.ui.ChartSeriesConfig
-import kaiex.ui.StrategyChartConfig
+import kaiex.ui.StrategyConfig
 import kotlinx.serialization.Serializable
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -14,7 +14,7 @@ class OrderBookWatcher(val symbol: String): Strategy(
     parameters = mapOf()) {
 
     private val log: Logger = LoggerFactory.getLogger(strategyId)
-    override val config = StrategyChartConfig(
+    override val config = StrategyConfig(
         strategyId = strategyId,
         strategyType = javaClass.simpleName,
         strategyDescription = "",

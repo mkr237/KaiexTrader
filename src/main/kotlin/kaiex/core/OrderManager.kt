@@ -4,7 +4,6 @@ import kaiex.exchange.dydx.DYDXExchangeService
 import kaiex.model.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.SharedFlow
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import org.slf4j.Logger
@@ -97,7 +96,7 @@ class OrderManager : KoinComponent {
         return orderUpdateSubscriptions[orderId]!!
     }
 
-    fun subscribeOFills(orderId: String): MutableSharedFlow<OrderFill> {
+    fun subscribeOrderFills(orderId: String): MutableSharedFlow<OrderFill> {
         if(!orderFillSubscriptions.containsKey(orderId))
             orderFillSubscriptions[orderId] = MutableSharedFlow()
 

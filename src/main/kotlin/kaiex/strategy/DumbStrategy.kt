@@ -3,11 +3,10 @@ package kaiex.strategy
 import kaiex.model.*
 import kaiex.ui.ChartSeriesConfig
 import kaiex.ui.SeriesUpdate
-import kaiex.ui.StrategyChartConfig
+import kaiex.ui.StrategyConfig
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.util.*
-import kotlin.math.abs
 
 class DumbStrategy(val symbol: String, period:Long = 30000): Strategy(
     strategyId = "DumbStrategy:$symbol,$period",
@@ -19,7 +18,7 @@ class DumbStrategy(val symbol: String, period:Long = 30000): Strategy(
     private val maxLong = 0.02f
     private val maxShort = -0.02f
 
-    override val config = StrategyChartConfig(
+    override val config = StrategyConfig(
         strategyId = strategyId,
         strategyType = javaClass.simpleName,
         strategyDescription = "",

@@ -16,10 +16,10 @@ suspend fun main() {
     val macd = MACD(12, 26, 9)
 
     coroutineScope {
-        async {
-            println("Starting UI server...")
-            ui.start()
-        }
+//        async {
+//            println("Starting UI server...")
+//            ui.start()
+//        }
 
         delay(2000)
         //ui.createSocket(route)

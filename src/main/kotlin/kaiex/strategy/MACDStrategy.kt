@@ -7,7 +7,7 @@ import kaiex.model.OrderTimeInForce
 import kaiex.model.OrderType
 import kaiex.ui.ChartSeriesConfig
 import kaiex.ui.SeriesUpdate
-import kaiex.ui.StrategyChartConfig
+import kaiex.ui.StrategyConfig
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import kotlin.math.abs
@@ -27,7 +27,7 @@ class MACDStrategy(val symbol: String,
     private val maxShort = -0.002f
 
     private var lastCandle: Long? = null
-    override val config = StrategyChartConfig(
+    override val config = StrategyConfig(
         strategyId = strategyId,
         strategyType = javaClass.simpleName,
         strategyDescription = "",
