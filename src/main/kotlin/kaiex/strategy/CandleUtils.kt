@@ -30,12 +30,12 @@ fun Flow<Trade>.toCandles(): Flow<Candle> = flow {
             totalVolume = trade.size
             startTime = trade.createdAt.truncatedTo(ChronoUnit.MINUTES)
             lastUpdate = trade.createdAt.truncatedTo(ChronoUnit.MINUTES)
-            emit(Candle(symbol, startTime!!.epochSecond, lastUpdate!!.epochSecond, open, high, low, close, tradeCount, totalVolume, trade.historical))
+            emit(Candle(symbol, startTime!!.epochSecond, lastUpdate!!.epochSecond, open, high, low, close, tradeCount, totalVolume, trade.historical,false))
 
         } else if (trade.createdAt.truncatedTo(ChronoUnit.MINUTES) != startTime) {
 
             // send the previous candle
-            emit(Candle(symbol, startTime!!.epochSecond, lastUpdate!!.epochSecond, open, high, low, close, tradeCount, totalVolume, trade.historical))
+            emit(Candle(symbol, startTime!!.epochSecond, lastUpdate!!.epochSecond, open, high, low, close, tradeCount, totalVolume, trade.historical,true))
 
             // create and send new candle
             open = trade.price
@@ -46,7 +46,7 @@ fun Flow<Trade>.toCandles(): Flow<Candle> = flow {
             totalVolume = trade.size
             startTime = trade.createdAt.truncatedTo(ChronoUnit.MINUTES)
             lastUpdate = trade.createdAt.truncatedTo(ChronoUnit.MINUTES)
-            emit(Candle(symbol, startTime!!.epochSecond, lastUpdate!!.epochSecond, open, high, low, close, tradeCount, totalVolume, trade.historical))
+            emit(Candle(symbol, startTime!!.epochSecond, lastUpdate!!.epochSecond, open, high, low, close, tradeCount, totalVolume, trade.historical,false))
 
         } else {
 
@@ -57,7 +57,7 @@ fun Flow<Trade>.toCandles(): Flow<Candle> = flow {
             tradeCount++
             totalVolume += trade.size
             lastUpdate = trade.createdAt.truncatedTo(ChronoUnit.MINUTES)
-            emit(Candle(symbol, startTime!!.epochSecond, lastUpdate!!.epochSecond, open, high, low, close, tradeCount, totalVolume, trade.historical))
+            emit(Candle(symbol, startTime!!.epochSecond, lastUpdate!!.epochSecond, open, high, low, close, tradeCount, totalVolume, trade.historical,false))
         }
     }
 }

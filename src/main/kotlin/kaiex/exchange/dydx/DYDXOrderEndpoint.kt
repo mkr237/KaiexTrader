@@ -194,7 +194,7 @@ class DYDXOrderEndpoint: DYDXHttpEndpoint<OrderUpdate> {
             side = OrderSide.valueOf(orderResponse.order.side),
             price = orderResponse.order.price.toFloat(),
             size = orderResponse.order.size.toFloat(),
-            remainingSize = orderResponse.order.remainingSize?.toFloat() ?: 0f,
+            remainingSize = orderResponse.order.remainingSize.toFloat(),
             status = OrderStatus.valueOf(orderResponse.order.status),
             timeInForce = OrderTimeInForce.valueOf(orderResponse.order.timeInForce),
             createdAt = isoTimeStringToMillis(orderResponse.order.createdAt),

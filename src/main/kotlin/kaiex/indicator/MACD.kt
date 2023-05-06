@@ -10,16 +10,16 @@ class MACD(private val fastPeriod: Int, private val slowPeriod: Int, private val
         fastMA.update(price)
         slowMA.update(price)
 
-        val macdValue = fastMA.getValue() - slowMA.getValue()
+        val macdValue = fastMA.value - slowMA.value
         signalMA.update(macdValue)
     }
 
     fun getMACDLine(): Double {
-        return fastMA.getValue() - slowMA.getValue()
+        return fastMA.value - slowMA.value
     }
 
     fun getSignalLine(): Double {
-        return signalMA.getValue()
+        return signalMA.value
     }
 
     fun getHistogram(): Double {

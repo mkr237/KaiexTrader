@@ -33,7 +33,7 @@ suspend fun main() {
         socket = client.webSocketSession {
             url(URL)
         }
-        if(socket?.isActive == true) {
+        if(socket.isActive == true) {
             println("OPEN")
 
             while(true) {

@@ -2,14 +2,11 @@ package kaiex.strategy
 
 import kaiex.indicator.MACD
 import kaiex.model.MarketDataSnapshot
-import kaiex.model.OrderSide
 import kaiex.model.OrderUpdate
 import kaiex.ui.ChartSeriesConfig
 import kaiex.ui.SeriesUpdate
 import kaiex.ui.StrategyConfig
 import kaiex.ui.StrategyMarketDataUpdate
-import kotlinx.coroutines.delay
-import kotlin.math.abs
 
 /**
  * Simple MACD Strategy
@@ -35,21 +32,19 @@ class MACDStrategy: KaiexBaseStrategy() {
     private var symbol:String? = null
     private val macd = MACD(12, 26, 9)
     private val positionSize = 0.02f
-    private var lastCandle: Long? = null
 
     override fun onStrategyCreate() {
         log.info("onStrategyCreate()")
         symbol = config.symbols[0]
+
+        addIndicator("MACD", symbol!!, macd)
     }
 
-    override fun onStrategyMarketData(snapshot: MarketDataSnapshot) {
-        //log.info("Candle: ${snapshot.getCandles(symbol!!).lastOrNull() ?: "-"}")
+    override fun onStrategyMarketData(snapshot: Map<String, MarketDataSnapshot>) {
 
-        val candle = snapshot.getCandles(symbol!!).lastOrNull()
+        val candle = snapshot[symbol]?.lastCandle!!
+        if(candle.complete) {
 
-        if(candle != null && candle.startTimestamp != lastCandle) {
-
-            macd.update(candle.close.toDouble())
             val macdLine = macd.getMACDLine()
             val signalLine = macd.getSignalLine()
             val histogram = macd.getHistogram()
@@ -69,12 +64,10 @@ class MACDStrategy: KaiexBaseStrategy() {
             )
 
             uiServer.send(StrategyMarketDataUpdate(config.strategyId, candle.startTimestamp, updates))
-            lastCandle = candle.startTimestamp
         }
     }
 
     override fun onStrategyOrderUpdate(update: OrderUpdate) {
-        log.info("*** Received order update ***")
         log.info("Order Update: $update")
     }
 

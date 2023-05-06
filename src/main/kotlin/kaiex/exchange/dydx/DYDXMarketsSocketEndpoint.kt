@@ -181,7 +181,7 @@ class DYDXMarketsSocketEndpoint: DYDXSocketEndpoint<MarketInfo> {
         log.debug("Subscribed to $message")
         markets = mutableMapOf()
         message.contents.markets.forEach {
-            val marketInfo = kaiex.model.MarketInfo(
+            val marketInfo = MarketInfo(
                 symbol = it.key,
                 status = parseMarketStatus(it.value.status!!),
                 indexPrice = it.value.indexPrice?.toFloat() ?: 0f,

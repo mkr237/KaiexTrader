@@ -2,7 +2,6 @@ package kaiex.model
 
 import kaiex.indicator.Indicator
 import kotlinx.coroutines.flow.Flow
-import kotlinx.serialization.Serializable
 import java.time.Instant
 
 enum class MarketStatus {
@@ -30,7 +29,8 @@ data class Candle (
     val close: Float,
     val numTrades: Int,
     val volume: Float,
-    val historical: Boolean
+    val historical: Boolean,
+    val complete: Boolean
 )
 
 data class Trade (
@@ -57,76 +57,13 @@ data class OrderBook (
     val receivedAt:Instant
 )
 
-class MarketDataSnapshot {
-
-    private val maxHistoryLength = 10
-    private val marketInfo: MutableMap<String, MarketInfo> = mutableMapOf()
-    private val candles: MutableMap<String, MutableList<Candle>> = mutableMapOf()
-    private val trades: MutableMap<String, MutableList<Trade>> = mutableMapOf()
-    private val orderBooks: MutableMap<String, MutableList<OrderBook>> = mutableMapOf()
-    private val indicators: MutableMap<String, MutableMap<String, Indicator>> = mutableMapOf()
-
-    fun updateMarketInfo(info: MarketInfo) {
-        marketInfo[info.symbol] = info
-    }
-
-    fun updateCandle(candle: Candle) {
-        val candlesForSymbol = getCandles(candle.symbol)
-        candlesForSymbol.add(candle)
-        if (candlesForSymbol.size > maxHistoryLength) {
-            candlesForSymbol.removeAt(0)
-        }
-    }
-
-    fun updateTrade(trade: Trade) {
-        val tradesForSymbol = getTrades(trade.symbol)
-        tradesForSymbol.add(trade)
-        if (tradesForSymbol.size > maxHistoryLength) {
-            tradesForSymbol.removeAt(0)
-        }
-    }
-
-    fun updateOrderBook(book: OrderBook) {
-        val orderBooksForSymbol = getOrderBooks(book.symbol)
-        orderBooksForSymbol.add(book)
-        if (orderBooksForSymbol.size > maxHistoryLength) {
-            orderBooksForSymbol.removeAt(0)
-        }
-    }
-
-    fun updateIndicator(indicator: Indicator) {
-
-    }
-
-    fun getMarketInfo(symbol: String): MarketInfo? {
-        return marketInfo[symbol]
-    }
-
-    fun getCandles(symbol: String): MutableList<Candle> {
-        val candlesForSymbol = candles[symbol]
-        if (candlesForSymbol == null) {
-            candles[symbol] = mutableListOf()
-        }
-        return candles[symbol]!!
-    }
-
-    fun getTrades(symbol: String): MutableList<Trade> {
-        val tradesForSymbol = trades[symbol]
-        if (tradesForSymbol == null) {
-            trades[symbol] = mutableListOf()
-        }
-        return trades[symbol]!!
-    }
-
-    fun getOrderBooks(symbol: String): MutableList<OrderBook> {
-        val orderBooksForSymbol = orderBooks[symbol]
-        if (orderBooksForSymbol == null) {
-            orderBooks[symbol] = mutableListOf()
-        }
-        return orderBooks[symbol]!!
-    }
-}
-
+data class MarketDataSnapshot (
+    var marketInfo: MarketInfo? = null,
+    var lastCandle: Candle? = null,
+    var lastTrade: Trade? = null,
+    var lastOrderBook: OrderBook? = null,
+    var indicators: MutableMap<String, Indicator> = mutableMapOf()
+)
 
 interface MarketDataService {
     suspend fun subscribeMarketInfo(): Flow<MarketInfo>

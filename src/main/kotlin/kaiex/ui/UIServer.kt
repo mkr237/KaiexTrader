@@ -10,6 +10,7 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
 import io.ktor.websocket.*
+import io.ktor.websocket.CloseReason.Codes.*
 import kaiex.core.format
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.channels.Channel
@@ -121,7 +122,7 @@ class UIServer : KoinComponent {
                 while (true) {
                     val message = inputQueue.receive()
 
-                    messageHistory.add(message!!)
+                    messageHistory.add(message)
                     if (messageHistory.size > HISTORY_SIZE) {
                         messageHistory.removeFirst()
                     }
@@ -131,7 +132,7 @@ class UIServer : KoinComponent {
                             session.send(Frame.Text(format.myJsonEncode(message)))
                         } catch (e: Throwable) {
                             log.info("Error occurred while sending message to $key: ${e.message}")
-                            session.close(CloseReason(CloseReason.Codes.UNEXPECTED_CONDITION, "Failed to send message"))
+                            session.close(CloseReason(INTERNAL_ERROR, "Failed to send message"))
                         }
                     }
                 }

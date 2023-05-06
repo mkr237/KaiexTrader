@@ -91,7 +91,7 @@ fun generateCandlestickStream(channel: SendChannel<CandlestickData>) {
         while (true) {
             delay(1000L) // Wait for 1 second
             val csd = generateCandlestick()
-            println("Sending: ${csd.toString()}")
+            println("Sending: $csd")
             channel.send(csd)
         }
     }

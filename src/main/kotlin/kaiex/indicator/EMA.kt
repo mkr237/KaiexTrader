@@ -2,7 +2,7 @@ package kaiex.indicator
 
 class EMA(private val period: Int):Indicator {
 
-    private var value: Double = 0.0
+    var value: Double = 0.0
     private var alpha: Double = 0.0
 
     override fun update(price: Double) {
@@ -12,9 +12,5 @@ class EMA(private val period: Int):Indicator {
         } else {
             value = alpha * price + (1 - alpha) * value
         }
-    }
-
-    fun getValue(): Double {
-        return value
     }
 }

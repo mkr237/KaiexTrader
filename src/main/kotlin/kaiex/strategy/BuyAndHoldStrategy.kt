@@ -4,7 +4,6 @@ import kaiex.model.MarketDataSnapshot
 import kaiex.model.OrderUpdate
 import kaiex.ui.ChartSeriesConfig
 import kaiex.ui.StrategyConfig
-import kotlinx.coroutines.delay
 
 /**
  * Strategy that simply buys and HODLs
@@ -35,11 +34,11 @@ class BuyAndHoldStrategy: KaiexBaseStrategy() {
         //buyAtMarket(symbol!!, 0.01f)
     }
 
-    override fun onStrategyMarketData(snapshot: MarketDataSnapshot) {
+    override fun onStrategyMarketData(snapshot: Map<String, MarketDataSnapshot>) {
         log.info("*** Received market data snapshot ***")
-        log.info("Market Data Info: ${snapshot.getMarketInfo(symbol!!) ?: "-"}")
-        log.info("Candles: ${snapshot.getCandles(symbol!!).lastOrNull() ?: "-"}")
-        log.info("Order Book: ${snapshot.getOrderBooks(symbol!!).lastOrNull() ?: "-"}")
+        log.info("Market Data Info: ${snapshot[symbol]?.marketInfo ?: "-"}")
+        log.info("Last Candle: ${snapshot[symbol]?.lastCandle ?: "-"}")
+        log.info("Last Order Book: ${snapshot[symbol]?.lastOrderBook ?: "-"}")
     }
 
     override fun onStrategyOrderUpdate(update: OrderUpdate) {
