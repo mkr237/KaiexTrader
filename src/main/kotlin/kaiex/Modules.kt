@@ -1,20 +1,18 @@
 package kaiex
 
+import kaiex.api.APIController
 import kaiex.core.*
 import kaiex.exchange.ExchangeService
 import kaiex.exchange.dydx.*
 import kaiex.exchange.simulator.SimulatorService
-import kaiex.ui.UIServer
 import org.koin.dsl.module
 
 val core = module {
-    //single { Kaiex() }
-    single { AccountManager() }
+    single(createdAtStart = true) { AccountManager() }
     single(createdAtStart = true) { MarketDataManager() }
     single(createdAtStart = true) { OrderManager() }
-    single { RiskManager() }
-    single { ReportManager() }
-    single(createdAtStart = true) { UIServer() }
+    single(createdAtStart = true) { RiskManager() }
+    single(createdAtStart = true) { ReportManager() }
 }
 
 val dydxExchangeService = module {
@@ -38,4 +36,8 @@ val dydxExchangeService = module {
 
 val binanceExchangeSimulator = module {
     single<ExchangeService> { SimulatorService() }
+}
+
+val apiModule = module {
+    single { APIController() }
 }

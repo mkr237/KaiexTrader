@@ -16,7 +16,8 @@ data class MarketInfo (
     val symbol:String,
     val status: MarketStatus,
     val indexPrice: Float,
-    val oraclePrice: Float
+    val oraclePrice: Float,
+    val createdAt: Instant
 )
 
 data class Candle (

@@ -1,36 +1,37 @@
 package kaiex
 
 import kaiex.strategy.KaiexStrategy
-import kaiex.strategy.StrategyException
-import kaiex.ui.StrategyConfig
 import kotlinx.coroutines.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import kotlin.reflect.full.createInstance
 
 /**
  * Loads and starts the strategy specified in the provided config
  */
-class StrategyRunner(private val config: StrategyConfig) {
+class StrategyRunner(private val strategyClass: String, private val parameters: Map<String, String>) {
     private val log:Logger = LoggerFactory.getLogger(javaClass.simpleName)
     private var strategy: KaiexStrategy? = null
 
     fun start() = runBlocking {
-        log.info("Starting strategy ${config.strategyType}")
-        strategy = loadStrategy(config.strategyType)
-        launch { strategy?.onCreate(config) }
+        log.info("Starting strategy $strategyClass with parameters $parameters")
+        strategy = loadStrategy(strategyClass)
+        launch { strategy?.onCreate() }
     }
 
     fun stop() = runBlocking {
-        log.info("Stopping strategy ${config.strategyType}")
+        log.info("Stopping strategy $strategyClass")
         launch { strategy?.onDestroy() }
     }
 
     private fun loadStrategy(className: String): KaiexStrategy? {
-        log.info("Loading strategy $className")
+        log.info("Loading strategy class $className")
         return try {
-            val kClass = Class.forName(className).kotlin
-            kClass.createInstance() as? KaiexStrategy
+            //val kClass =
+            //kClass.createInstance() as? KaiexStrategy
+
+            val constructor = Class.forName(className).kotlin.constructors.first()
+            constructor.call(parameters) as KaiexStrategy
+
         } catch (e: Exception) {
             log.error("Error loading strategy: $className")
             e.printStackTrace()

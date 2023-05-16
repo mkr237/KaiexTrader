@@ -23,6 +23,13 @@ class OrderManager : KoinComponent {
     private val fills : MutableMap<String, MutableList<OrderFill>> = mutableMapOf()  // by orderId
     private val positions : MutableMap<String, Position> = mutableMapOf()  // by symbol
 
+    val orderMap : Map<String, OrderUpdate>
+        get() = orders.toMap()
+    val fillMap : Map<String, MutableList<OrderFill>>
+        get() = fills.toMap()
+    val positionMap : Map<String, Position>
+        get() = positions.toMap()
+
     private val orderUpdateSubscriptions = mutableMapOf<String, MutableSharedFlow<OrderUpdate>>()
     private val orderFillSubscriptions = mutableMapOf<String, MutableSharedFlow<OrderFill>>()
     private val positionSubscriptions = mutableMapOf<String, MutableSharedFlow<Position>>()
@@ -112,12 +119,12 @@ class OrderManager : KoinComponent {
     }
 
     fun createOrder(symbol: String,
-                            type: OrderType,
-                            side: OrderSide,
-                            price: Float,
-                            size: Float,
-                            limitFee: Float,
-                            timeInForce: OrderTimeInForce): Result<String> {
+                    type: OrderType,
+                    side: OrderSide,
+                    price: Float,
+                    size: Float,
+                    limitFee: Float,
+                    timeInForce: OrderTimeInForce): Result<String> {
 
         val order = CreateOrder(
             UUID.randomUUID().toString(),

@@ -19,7 +19,7 @@ class SimulatorService: KoinComponent, ExchangeService {
 
     private val log: Logger = LoggerFactory.getLogger(javaClass.simpleName)
     private val exchangeName = "SIM"
-    private var lastTradePrice = 0f
+    private var lastTrade:Trade? = null
     private val orderUpdates = ArrayBlockingQueue<OrderUpdate>(1)
     private val orderFills = ArrayBlockingQueue<OrderFill>(1)
 
@@ -41,7 +41,8 @@ class SimulatorService: KoinComponent, ExchangeService {
         return flow {
             while(true) {
                 delay(5000)
-                emit(MarketInfo("BTC-USD", MarketStatus.ONLINE, lastTradePrice, lastTradePrice))
+                if(lastTrade != null)
+                    emit(MarketInfo("BTC-USD", MarketStatus.ONLINE, lastTrade?.price!!, lastTrade?.price!!, lastTrade?.createdAt!!))
             }
         }
     }
@@ -54,7 +55,7 @@ class SimulatorService: KoinComponent, ExchangeService {
         val dataFile = "Binance BTCUSDT-trades-2023-04-04.csv"
         log.info("Subscribing to: $dataFile")
         return TickPlayer(dataFile, BinanceAdapter(symbol), relativeTime = false).start().onEach {
-            lastTradePrice = it.price
+            lastTrade = it
         }
     }
 
@@ -80,7 +81,7 @@ class SimulatorService: KoinComponent, ExchangeService {
 
     override fun createOrder(order: CreateOrder): Result<String> {
 
-        val fillPrice = lastTradePrice
+        val fillPrice = lastTrade?.price
         val update = OrderUpdate(
             order.orderId,
             "exchangeName",
@@ -102,7 +103,7 @@ class SimulatorService: KoinComponent, ExchangeService {
             order.symbol,
             order.type,
             order.side,
-            fillPrice,
+            fillPrice!!,
             order.size,
             0f,
             OrderRole.TAKER,

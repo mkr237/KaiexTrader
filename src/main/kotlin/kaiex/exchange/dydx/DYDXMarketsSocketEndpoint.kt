@@ -18,6 +18,7 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.time.Instant
 import kotlin.collections.List
 
 class DYDXMarketsSocketEndpoint: DYDXSocketEndpoint<MarketInfo> {
@@ -185,7 +186,8 @@ class DYDXMarketsSocketEndpoint: DYDXSocketEndpoint<MarketInfo> {
                 symbol = it.key,
                 status = parseMarketStatus(it.value.status!!),
                 indexPrice = it.value.indexPrice?.toFloat() ?: 0f,
-                oraclePrice = it.value.oraclePrice?.toFloat() ?: 0f
+                oraclePrice = it.value.oraclePrice?.toFloat() ?: 0f,
+                Instant.now()
             )
             markets[it.key] = marketInfo
         }
@@ -209,7 +211,8 @@ class DYDXMarketsSocketEndpoint: DYDXSocketEndpoint<MarketInfo> {
                     symbol = update.key,
                     status = MarketStatus.valueOf(update.value.status ?: markets[update.key]?.status.toString()),
                     indexPrice = update.value.indexPrice?.toFloatOrNull() ?: markets[update.key]?.indexPrice!!,
-                    oraclePrice = update.value.oraclePrice?.toFloatOrNull() ?: markets[update.key]?.oraclePrice!!
+                    oraclePrice = update.value.oraclePrice?.toFloatOrNull() ?: markets[update.key]?.oraclePrice!!,
+                    Instant.now()
                 )
                 markets[update.key] = marketInfo
 

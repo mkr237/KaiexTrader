@@ -3,41 +3,45 @@ package kaiex.strategy
 import kaiex.indicator.MACD
 import kaiex.model.MarketDataSnapshot
 import kaiex.model.OrderUpdate
-import kaiex.ui.ChartSeriesConfig
-import kaiex.ui.SeriesUpdate
-import kaiex.ui.StrategyConfig
-import kaiex.ui.StrategyMarketDataUpdate
+import kaiex.ui.dsl.SeriesColor
+import kaiex.ui.dsl.createChart
 
 /**
  * Simple MACD Strategy
  */
-class MACDStrategy: KaiexBaseStrategy() {
+class MACDStrategy(private val parameters: Map<String, String>): KaiexBaseStrategy() {
 
-    companion object {
-        val config = StrategyConfig(
-            strategyId = "MACDStrategy:BTC-USD",
-            strategyType = "kaiex.strategy.MACDStrategy",
-            strategyDescription = "Simple MACD Strategy",
-            symbols = listOf("BTC-USD"),
-            parameters = mapOf(),
-            chartConfig = listOf(
-                ChartSeriesConfig("price", "candle", 0, "#00FF00"),
-                ChartSeriesConfig("histogram", "histogram", 1, "#26a69a"),
-                ChartSeriesConfig("macd", "line", 1, "#2196F3"),
-                ChartSeriesConfig("signal", "line", 1, "#FC6C02")
-            )
-        )
-    }
+    // extract params
+    private val strategyParams = StrategyParams(parameters, setOf("symbol"))
+    private val symbol = strategyParams.getString("symbol")
+    private val fastPeriod = strategyParams.getInt("fast")
+    private val slowPeriod = strategyParams.getInt("slow")
+    private val signalPeriod = strategyParams.getInt("signal")
 
-    private var symbol:String? = null
-    private val macd = MACD(12, 26, 9)
+    private val macd = MACD(fastPeriod, slowPeriod, signalPeriod)
     private val positionSize = 0.02f
 
-    override fun onStrategyCreate() {
-        log.info("onStrategyCreate()")
-        symbol = config.symbols[0]
+    private val defaultChart = createChart("Default") {
+        candleSeries("Candles") {
+            upColor = SeriesColor.GREEN.rgb
+            downColor = SeriesColor.RED.rgb
+        }
+        valueSeries("MACD") {
+            color = SeriesColor.BLUE.rgb
+        }
+        valueSeries("Signal") {
+            color = SeriesColor.ORANGE.rgb
+        }
+        valueSeries("Position") {
+            color = SeriesColor.GREY.rgb
+        }
+    }
 
-        addIndicator("MACD", symbol!!, macd)
+    override fun onStrategyCreate() {
+        log.info("onStrategyCreate() with Params $parameters")
+        reportManager.addChart(defaultChart)
+        addSymbol(symbol)
+        addIndicator("MACD", symbol, macd)
     }
 
     override fun onStrategyMarketData(snapshot: Map<String, MarketDataSnapshot>) {
@@ -51,19 +55,18 @@ class MACDStrategy: KaiexBaseStrategy() {
 
             if (!candle.historical && macdLine > signalLine) {
                 log.info("Detected LONG signal - MACD: $macdLine > Signal: $signalLine")
-                setPosition(symbol!!, positionSize)
+                setPosition(symbol, positionSize)
             } else if (!candle.historical && macdLine < signalLine) {
                 log.info("Detected SHORT signal - MACD: $macdLine < Signal: $signalLine\"")
-                setPosition(symbol!!, -positionSize)
+                setPosition(symbol, -positionSize)
             }
 
-            val updates = listOf(
-                SeriesUpdate.NumericUpdate(id = "macd", value = macdLine),
-                SeriesUpdate.NumericUpdate(id = "signal", value = signalLine),
-                SeriesUpdate.NumericUpdate(id = "histogram", value = histogram)
-            )
-
-            uiServer.send(StrategyMarketDataUpdate(config.strategyId, candle.startTimestamp, updates))
+            defaultChart.update(candle.startTimestamp) {
+                "Candles"(listOf(candle.open.toDouble(), candle.high.toDouble(), candle.low.toDouble(), candle.close.toDouble()))
+                "MACD"(macdLine)
+                "Signal"(signalLine)
+                "Position"(getCurrentPosition(symbol).toDouble())
+            }
         }
     }
 
