@@ -18,7 +18,6 @@ class OrderManager : KoinComponent {
     private val exchangeService: ExchangeService by inject()
     private val accountManager : AccountManager by inject()
 
-    // Need these?
     private val orders : MutableMap<String, OrderUpdate> = mutableMapOf() // by OrderId
     private val fills : MutableMap<String, MutableList<OrderFill>> = mutableMapOf()  // by orderId
     private val positions : MutableMap<String, Position> = mutableMapOf()  // by symbol

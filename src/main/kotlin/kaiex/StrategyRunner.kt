@@ -12,15 +12,17 @@ class StrategyRunner(private val strategyClass: String, private val parameters: 
     private val log:Logger = LoggerFactory.getLogger(javaClass.simpleName)
     private var strategy: KaiexStrategy? = null
 
-    fun start() = runBlocking {
+    suspend fun start() {
         log.info("Starting strategy $strategyClass with parameters $parameters")
         strategy = loadStrategy(strategyClass)
-        launch { strategy?.onCreate() }
+        //launch { strategy?.onCreate() }
+        strategy?.onCreate()
     }
 
-    fun stop() = runBlocking {
+    suspend fun stop() {
         log.info("Stopping strategy $strategyClass")
-        launch { strategy?.onDestroy() }
+        //launch { strategy?.onDestroy() }
+        strategy?.onDestroy()
     }
 
     private fun loadStrategy(className: String): KaiexStrategy? {

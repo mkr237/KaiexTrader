@@ -327,7 +327,7 @@ class DYDXAccountSocketEndpoint: DYDXSocketEndpoint<AccountUpdate> {
             message.id,
             convertOrders(message.contents.orders),
             emptyList(),
-            emptyList()
+            emptyList() // TODO convert open positions
         )
     }
 

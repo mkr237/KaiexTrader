@@ -1,6 +1,5 @@
 package kaiex.strategy
 
-import kaiex.core.MarketDataManager
 import kaiex.core.OrderManager
 import kaiex.core.ReportManager
 import kaiex.indicator.Indicator
@@ -10,7 +9,6 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.time.Instant
 import kotlin.math.absoluteValue
 
 /**
@@ -21,41 +19,36 @@ abstract class KaiexBaseStrategy : KoinComponent, KaiexStrategy {
 
     protected val log: Logger = LoggerFactory.getLogger(javaClass.simpleName)
 
-    private val marketDataManager : MarketDataManager by inject()
+    protected val marketDataTracker = MarketDataTracker(::onMarketData)
     private val orderManager : OrderManager by inject()
     protected val reportManager : ReportManager by inject()
 
-    private val orders : MutableMap<String, OrderUpdate> = mutableMapOf() // by OrderId
-    private val fills : MutableMap<String, MutableList<OrderFill>> = mutableMapOf()  // by orderId
-    private val positions : MutableMap<String, PositionTracker> = mutableMapOf()  // by symbol
-    private val marketDataSnapshots:MutableMap<String, MarketDataSnapshot> = mutableMapOf()
-
     private val orderUpdatesScope = CoroutineScope(Dispatchers.Default)
-    private val marketDataUpdatesScope = CoroutineScope(Dispatchers.Default)
 
-    // TMP
-    private val symbols = mutableListOf<String>()
+    private val jobs = mutableListOf<Job>()
 
     /**
      * Lifecycle functions
      */
-    override suspend fun onCreate() {
-        log.info("onCreate()")
+    override suspend fun onCreate() = runBlocking {
+        log.debug("onCreate()")
+        jobs.add(marketDataTracker.trackMarketInfo())
         onStrategyCreate()
+        jobs.joinAll()
     }
 
-    override suspend fun onMarketData(timestamp: Instant, snapshot: Map<String, MarketDataSnapshot>) {
-        log.info("onMarketData() - $timestamp")
-        onStrategyMarketData(marketDataSnapshots)
+    override suspend fun onMarketData(snapshot: Map<String, MarketDataSnapshot>) {
+        log.debug("onMarketData($snapshot)")
+        onStrategyMarketData(snapshot)
     }
 
     override suspend fun onOrderUpdate(update: OrderUpdate) {
-        log.info("onOrderUpdate($update)")
+        log.debug("onOrderUpdate($update)")
         onStrategyOrderUpdate(update)
     }
 
     override suspend fun onDestroy() = runBlocking {
-        log.info("onDestroy()")
+        log.debug("onDestroy()")
         onStrategyDestroy()
     }
 
@@ -67,66 +60,18 @@ abstract class KaiexBaseStrategy : KoinComponent, KaiexStrategy {
     /**
      * Market data functions
      */
-    private suspend fun subscribeMarketDataInfo(symbol: String) {
-        marketDataManager.subscribeMarketInfo(symbol).listenForEvents().collect { marketInfo ->
-            if(marketInfo.indexPrice != null) {
-                log.debug("Received market info: $marketInfo")
-                positions[symbol]!!.updatePrice(marketInfo.indexPrice)
-            }
-
-            marketDataSnapshots[symbol]?.marketInfo = marketInfo
-            onMarketData(marketInfo.createdAt, marketDataSnapshots)
-        }
+    fun addTrades(symbol: String) {
+        jobs.add(marketDataTracker.trackTrades(symbol))
     }
 
-    private suspend fun subscribeTrades(symbol: String) {
-        marketDataManager.subscribeTrades(symbol).listenForEvents().collect { trade ->
-            log.debug("Received trade: $trade")
-        }
-    }
-
-    private suspend fun subscribeCandles(symbol: String) {
-        marketDataManager.subscribeCandles(symbol).listenForEvents().collect { candle ->
-            log.info("Received candle: $candle")
-
-            // if the candle is complete, update any registered indicators and call strategy
-            if(candle.complete) {
-                marketDataSnapshots[symbol]?.lastCandle = candle
-                marketDataSnapshots[symbol]?.indicators?.forEach { (_, indicator) ->
-                    indicator.update(candle.close.toDouble())
-                }
-                onMarketData(Instant.ofEpochSecond(candle.startTimestamp), marketDataSnapshots)
-            }
-        }
-    }
-
-    protected suspend fun subscribeOrderBook(symbol: String) {
-        marketDataManager.subscribeOrderBook(symbol).listenForEvents().collect { orderBook ->
-            log.debug("Received order book: $orderBook")
-            val bestBid = orderBook.bids[0].price.toDouble()
-            val bestAsk = orderBook.asks[0].price.toDouble()
-        }
-    }
-
-    protected fun addSymbol(symbol: String) {
-        symbols.add(symbol)
-        marketDataSnapshots[symbol] = MarketDataSnapshot()
-        positions[symbol] = PositionTracker()
-
-        // subscribe to market data
-        marketDataUpdatesScope.launch { subscribeMarketDataInfo(symbol) }
-        marketDataUpdatesScope.launch { subscribeCandles(symbol) }
-        //launch { subscribeOrderBook(symbol) }
-        //launch { subscribeTrades(symbol) }`
-    }
-
-    protected fun addIndicator(name: String, symbol: String, indicator: Indicator) {
-        marketDataSnapshots[symbol]?.indicators?.putIfAbsent(name, indicator)
+    fun addIndicator(name:String, symbol: String, indicator: Indicator) {
+        marketDataTracker.addIndicator(name, symbol, indicator)
     }
 
     /**
      * Order management functions
      */
+    //TODO remove the hard-coded values
     protected fun buyAtMarket(symbol: String, size: Float) =
         createOrder(symbol, OrderType.MARKET, OrderSide.BUY, 35000f, size, 0.015f, OrderTimeInForce.FOK)
 
@@ -157,8 +102,6 @@ abstract class KaiexBaseStrategy : KoinComponent, KaiexStrategy {
                 // listen for order updates
                 orderManager.subscribeOrderUpdates(orderId).collect { update ->
                     log.info("Received update for order: $orderId: $update")
-                    orders[update.orderId] = update
-
                     if(update.status == OrderStatus.FILLED) {
                         log.info("Order ${update.orderId} is FILLED")
                         throw CancellationException("Order ${update.orderId} is FILLED")
@@ -170,16 +113,10 @@ abstract class KaiexBaseStrategy : KoinComponent, KaiexStrategy {
             orderUpdatesScope.launch {
                 // listen for order fills
                 orderManager.subscribeOrderFills(orderId).collect { fill ->
-
-                    if(!symbols.contains(fill.symbol)) {
-                        throw StrategyException("Received a fill for a unknown symbol: ${fill.symbol}")
-                    }
-
                     log.info("Received fill for order: $orderId: $fill")
-                    if(!fills.containsKey(fill.orderId))
-                        fills[fill.orderId] = mutableListOf()
-                    fills[fill.orderId]?.add(fill)
-                    positions[symbol]!!.addTrade(fill)
+//                    if(!symbols.contains(fill.symbol)) {
+//                        throw StrategyException("Received a fill for a unknown symbol: ${fill.symbol}")
+//                    }
                 }
             }
 
@@ -192,6 +129,6 @@ abstract class KaiexBaseStrategy : KoinComponent, KaiexStrategy {
      * Misc. functions
      */
     protected fun getCurrentPosition(symbol: String): Float {
-        return positions[symbol]?.positionSize?.toFloat() ?: 0f
+        return orderManager.positionMap[symbol]?.size ?: 0f
     }
 }

@@ -51,11 +51,6 @@ class DYDXExchangeService: KoinComponent, ExchangeService {
         }
     }
 
-
-    override suspend fun unsubscribeMarketInfo() {
-        TODO("Not yet implemented")
-    }
-
     /**
      * Market Data Service
      */
@@ -91,15 +86,7 @@ class DYDXExchangeService: KoinComponent, ExchangeService {
         }
     }
 
-    override suspend fun unsubscribeTrades(symbol: String) {
-        TODO("Not yet implemented")
-    }
-
     override suspend fun subscribeCandles(symbol: String): Flow<Candle> {
-        TODO("Not yet implemented")
-    }
-
-    override suspend fun unsubscribeCandles(symbol: String) {
         TODO("Not yet implemented")
     }
 
@@ -132,11 +119,6 @@ class DYDXExchangeService: KoinComponent, ExchangeService {
                 return flow {  }
             }
         }
-    }
-
-
-    override suspend fun unsubscribeOrderBook(symbol: String) {
-        TODO("Not yet implemented")
     }
 
     /**
@@ -182,9 +164,5 @@ class DYDXExchangeService: KoinComponent, ExchangeService {
                 return flow {  }
             }
         }
-    }
-
-    override suspend fun unsubscribeAccountUpdate() {
-        TODO("Not yet implemented")
     }
 }

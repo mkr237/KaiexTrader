@@ -51,6 +51,7 @@ class UIServer : KoinComponent {
         log.info("Starting")
 
         val server = embeddedServer(Netty, port = SERVER_PORT) {
+           val t = this
             install(WebSockets)
             install(ContentNegotiation) {
                 json(Json {

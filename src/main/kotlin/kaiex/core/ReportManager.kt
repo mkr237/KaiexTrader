@@ -1,6 +1,6 @@
 package kaiex.core
 
-import kaiex.ui.dsl.Chart
+import kaiex.ui.Chart
 import kotlinx.serialization.json.Json
 import org.koin.core.component.KoinComponent
 import org.slf4j.Logger

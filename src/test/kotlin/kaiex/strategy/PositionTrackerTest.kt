@@ -1,5 +1,6 @@
 package kaiex.strategy
 
+import kaiex.exchange.simulator.PositionTracker
 import kaiex.model.OrderFill
 import kaiex.model.OrderRole
 import kaiex.model.OrderSide

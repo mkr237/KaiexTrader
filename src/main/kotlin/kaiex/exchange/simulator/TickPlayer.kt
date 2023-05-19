@@ -36,6 +36,7 @@ class TickPlayer(val fileName: String, val adapter: TickAdapter, val relativeTim
 
         reader.useLines { lines ->
             var lastTimestamp: Instant? = null
+            var lineCount = 0
 
             val elapsed = measureTimeMillis {
                 lines.forEachIndexed { index, line ->
@@ -56,13 +57,15 @@ class TickPlayer(val fileName: String, val adapter: TickAdapter, val relativeTim
 //                    lastTimestamp = trade.createdAt
 
                         // tmp
-                        //delay(100)
+                        //delay(5)
                         emit(trade)
                     }
+
+                    lineCount++
                 }
             }
 
-            log.info("Finished in $elapsed ms")
+            log.info("Processed $lineCount records in $elapsed ms")
         }
     }
 }

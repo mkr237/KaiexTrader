@@ -3,8 +3,8 @@ package kaiex.strategy
 import kaiex.indicator.MACD
 import kaiex.model.MarketDataSnapshot
 import kaiex.model.OrderUpdate
-import kaiex.ui.dsl.SeriesColor
-import kaiex.ui.dsl.createChart
+import kaiex.ui.SeriesColor
+import kaiex.ui.createChart
 
 /**
  * Simple MACD Strategy
@@ -21,7 +21,7 @@ class MACDStrategy(private val parameters: Map<String, String>): KaiexBaseStrate
     private val macd = MACD(fastPeriod, slowPeriod, signalPeriod)
     private val positionSize = 0.02f
 
-    private val defaultChart = createChart("Default") {
+    private val chart = createChart("Default") {
         candleSeries("Candles") {
             upColor = SeriesColor.GREEN.rgb
             downColor = SeriesColor.RED.rgb
@@ -38,16 +38,18 @@ class MACDStrategy(private val parameters: Map<String, String>): KaiexBaseStrate
     }
 
     override fun onStrategyCreate() {
-        log.info("onStrategyCreate() with Params $parameters")
-        reportManager.addChart(defaultChart)
-        addSymbol(symbol)
+        log.info("onStrategyCreate: $parameters")
+        reportManager.addChart(chart)
+        addTrades(symbol)
         addIndicator("MACD", symbol, macd)
     }
 
     override fun onStrategyMarketData(snapshot: Map<String, MarketDataSnapshot>) {
 
-        val candle = snapshot[symbol]?.lastCandle!!
-        if(candle.complete) {
+        log.info("onStrategyMarketData: $snapshot")
+
+        val candle = snapshot[symbol]?.lastCandle
+        if (candle?.complete == true) {
 
             val macdLine = macd.getMACDLine()
             val signalLine = macd.getSignalLine()
@@ -61,7 +63,7 @@ class MACDStrategy(private val parameters: Map<String, String>): KaiexBaseStrate
                 setPosition(symbol, -positionSize)
             }
 
-            defaultChart.update(candle.startTimestamp) {
+            chart.update(candle.startTimestamp) {
                 "Candles"(listOf(candle.open.toDouble(), candle.high.toDouble(), candle.low.toDouble(), candle.close.toDouble()))
                 "MACD"(macdLine)
                 "Signal"(signalLine)
@@ -71,10 +73,10 @@ class MACDStrategy(private val parameters: Map<String, String>): KaiexBaseStrate
     }
 
     override fun onStrategyOrderUpdate(update: OrderUpdate) {
-        log.info("Order Update: $update")
+        log.info("onStrategyOrderUpdate: $update")
     }
 
     override fun onStrategyDestroy() {
-        log.info("onStop()")
+        log.info("onStrategyDestroy()")
     }
 }

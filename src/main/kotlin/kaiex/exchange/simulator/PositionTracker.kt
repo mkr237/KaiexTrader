@@ -1,4 +1,4 @@
-package kaiex.strategy
+package kaiex.exchange.simulator
 
 import kaiex.model.OrderFill
 import kaiex.model.OrderSide
@@ -70,7 +70,7 @@ class PositionTracker(var positionSize: BigDecimal = BigDecimal.ZERO,
     private fun updatePnl() {
         if(marketPrice != null) {
             unrealizedPnl = positionSize * (marketPrice!! - avgEntryPrice)
-            //
+            // TODO realised
         } else {
             unrealizedPnl = BigDecimal.ZERO
             realizedPnl = BigDecimal.ZERO

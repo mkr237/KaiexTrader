@@ -1,9 +1,9 @@
 package kaiex.exchange.simulator
 
-import com.fersoft.types.Order
 import kaiex.exchange.ExchangeService
 import kaiex.exchange.simulator.adapters.BinanceAdapter
 import kaiex.model.*
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.onEach
 import org.koin.core.component.KoinComponent
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.math.BigDecimal
 import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.ArrayBlockingQueue
@@ -20,35 +21,50 @@ class SimulatorService: KoinComponent, ExchangeService {
     private val log: Logger = LoggerFactory.getLogger(javaClass.simpleName)
     private val exchangeName = "SIM"
     private var lastTrade:Trade? = null
-    private val orderUpdates = ArrayBlockingQueue<OrderUpdate>(1)
-    private val orderFills = ArrayBlockingQueue<OrderFill>(1)
+
+    private val positionBySymbol:MutableMap<String, PositionTracker> = mutableMapOf()
+
+    private val updateQueue = ArrayBlockingQueue<OrderUpdate>(1)
+    private val fillQueue = ArrayBlockingQueue<OrderFill>(1)
+    private val positionQueue = ArrayBlockingQueue<Position>(1)
 
     override suspend fun subscribeAccountUpdates(accountId: String): Flow<AccountUpdate> {
         return flow {
             while(true) {
-                val orderUpdate = orderUpdates.take()
-                val orderFill = orderFills.take()
-                emit(AccountUpdate(accountId, listOf(orderUpdate), listOf(orderFill), listOf()))
+                val orderUpdate = updateQueue.take()
+                val orderFill = fillQueue.take()
+                val positionUpdate = positionQueue.take()
+                emit(AccountUpdate(accountId, listOf(orderUpdate), listOf(orderFill), listOf(positionUpdate)))
             }
         }
-    }
-
-    override suspend fun unsubscribeAccountUpdate() {
-        TODO("Not yet implemented")
     }
 
     override suspend fun subscribeMarketInfo(): Flow<MarketInfo> {
         return flow {
             while(true) {
-                delay(5000)
-                if(lastTrade != null)
-                    emit(MarketInfo("BTC-USD", MarketStatus.ONLINE, lastTrade?.price!!, lastTrade?.price!!, lastTrade?.createdAt!!))
+                if(lastTrade != null) {
+
+                    // update the index price of relevant position tracker(s)
+                    if(!positionBySymbol.containsKey("BTC-USD")) {
+                        positionBySymbol["BTC-USD"]?.updatePrice(lastTrade!!.price)
+                    }
+
+                    // send the update
+                    emit(
+                        MarketInfo(
+                            "BTC-USD",
+                            MarketStatus.ONLINE,
+                            lastTrade?.price!!,
+                            lastTrade?.price!!,
+                            lastTrade?.createdAt!!
+                        )
+                    )
+
+                    // the strategy only needs one so we can end the flow
+                    throw CancellationException("Market information sent")
+                }
             }
         }
-    }
-
-    override suspend fun unsubscribeMarketInfo() {
-        log.info("unsubscribeMarketInfo")
     }
 
     override suspend fun subscribeTrades(symbol: String): Flow<Trade> {
@@ -59,15 +75,7 @@ class SimulatorService: KoinComponent, ExchangeService {
         }
     }
 
-    override suspend fun unsubscribeTrades(symbol: String) {
-        log.info("unsubscribeTrades")
-    }
-
     override suspend fun subscribeCandles(symbol: String): Flow<Candle> {
-        TODO("Not yet implemented")
-    }
-
-    override suspend fun unsubscribeCandles(symbol: String) {
         TODO("Not yet implemented")
     }
 
@@ -75,16 +83,12 @@ class SimulatorService: KoinComponent, ExchangeService {
         TODO("Not yet implemented")
     }
 
-    override suspend fun unsubscribeOrderBook(symbol: String) {
-        log.info("unsubscribeOrderBook")
-    }
-
     override fun createOrder(order: CreateOrder): Result<String> {
 
         val fillPrice = lastTrade?.price
         val update = OrderUpdate(
             order.orderId,
-            "exchangeName",
+            exchangeName,
             "0",
             order.symbol,
             order.type,
@@ -110,8 +114,27 @@ class SimulatorService: KoinComponent, ExchangeService {
             order.createdAt,
             Instant.now().epochSecond)
 
-        orderUpdates.put(update)
-        orderFills.put(fill)
+        if(!positionBySymbol.containsKey(fill.symbol)) {
+            positionBySymbol[fill.symbol] = PositionTracker()
+        }
+
+        val p = positionBySymbol[fill.symbol]!!
+        p.addTrade(fill)
+
+        val position = Position(
+            UUID.randomUUID().toString(),
+            fill.symbol,
+            if(p.positionSize > BigDecimal.ZERO) PositionSide.LONG else PositionSide.SHORT,
+            p.avgEntryPrice.toFloat(),
+            p.avgExitPrice.toFloat(),
+            p.positionSize.toFloat(),
+            p.unrealizedPnl.toFloat(),
+            Instant.now().epochSecond,  // TODO pull from tracker
+            Instant.now().epochSecond)  // // TODO pull from tracker
+
+        updateQueue.put(update)
+        fillQueue.put(fill)
+        positionQueue.put(position)
         return Result.success(order.orderId)
     }
 }

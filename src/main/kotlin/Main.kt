@@ -8,9 +8,14 @@ import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
 import kaiex.*
 import kaiex.api.APIController
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import org.koin.core.context.startKoin
 import org.koin.ktor.ext.inject
+import org.koin.ktor.plugin.Koin
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -18,11 +23,13 @@ private val log: Logger = LoggerFactory.getLogger("Main")
 
 fun main(args: Array<String>) {
 
+    // check args
     if (args.size < 2) {
         log.error("Usage: engine [command] [strategy] [parameters]")
         return
     }
 
+    // pass args
     val command = args[0]
     val strategy = args[1]
     val parameters = if (args.size > 2) {
@@ -34,16 +41,28 @@ fun main(args: Array<String>) {
         emptyMap()
     }
 
-    when (command) {
-        "run" ->  runStrategy(strategy, parameters)
-        "backtest" -> backtestStrategy(strategy, parameters)
-        else -> log.error("Invalid command: $command")
+    // run strategy
+    CoroutineScope(Dispatchers.Default).launch {
+
+        // load required modules
+        startKoin {
+            modules(core)
+            modules(apiModule)
+            when (command) {
+                "run" -> { modules(dydxExchangeService) }
+                "backtest" -> { modules(binanceExchangeSimulator) }
+                else -> log.error("Invalid command: $command")
+            }
+        }
+
+        // run the strategy
+        val runner = StrategyRunner(strategy, parameters)
+        runner.start()
+        runner.stop()
     }
 
+    // start web server
     embeddedServer(Netty, port = 8080) {
-//        install(Koin) {
-//
-//        }
         install(WebSockets)
         install(ContentNegotiation) {
             json(Json {
@@ -62,34 +81,4 @@ fun main(args: Array<String>) {
             }
         }
     }.start(wait = true)
-}
-
-fun runStrategy(strategy: String, parameters: Map<String, String>) {
-    log.info("Running strategy $strategy")
-    startKoin{
-        //printLogger(Level.INFO)
-        //fileProperties()
-        modules(dydxExchangeService)
-        modules(core)
-        modules(apiModule)
-    }
-
-    val runner = StrategyRunner(strategy, parameters)
-    runner.start()
-    runner.stop()
-}
-
-fun backtestStrategy(strategy: String, parameters: Map<String, String>) {
-    log.info("Backtesting strategy $strategy")
-    startKoin{
-        //printLogger(Level.INFO)
-        //fileProperties()
-        modules(binanceExchangeSimulator)
-        modules(core)
-        modules(apiModule)
-    }
-
-    val runner = StrategyRunner(strategy, parameters)
-    runner.start()
-    runner.stop()
 }
