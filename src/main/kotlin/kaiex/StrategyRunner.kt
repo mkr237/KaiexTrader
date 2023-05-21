@@ -15,22 +15,17 @@ class StrategyRunner(private val strategyClass: String, private val parameters: 
     suspend fun start() {
         log.info("Starting strategy $strategyClass with parameters $parameters")
         strategy = loadStrategy(strategyClass)
-        //launch { strategy?.onCreate() }
-        strategy?.onCreate()
+        strategy?.start()
     }
 
     suspend fun stop() {
         log.info("Stopping strategy $strategyClass")
-        //launch { strategy?.onDestroy() }
-        strategy?.onDestroy()
+        strategy?.stop()
     }
 
     private fun loadStrategy(className: String): KaiexStrategy? {
         log.info("Loading strategy class $className")
         return try {
-            //val kClass =
-            //kClass.createInstance() as? KaiexStrategy
-
             val constructor = Class.forName(className).kotlin.constructors.first()
             constructor.call(parameters) as KaiexStrategy
 

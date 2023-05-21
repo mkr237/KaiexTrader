@@ -124,7 +124,7 @@ class DYDXExchangeService: KoinComponent, ExchangeService {
     /**
      * Order Service
      */
-    override fun createOrder(order: CreateOrder):Result<String> {
+    override fun createOrder(order: CreateOrder):Result<OrderUpdate> {
 
         val service : DYDXOrderEndpoint by inject()
 

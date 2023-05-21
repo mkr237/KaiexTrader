@@ -96,5 +96,5 @@ data class Position(val positionId:String,
                     val createdAt:Long,
                     val closedAt:Long)
 interface OrderService {
-    fun createOrder(order: CreateOrder):Result<String>
+    fun createOrder(order: CreateOrder):Result<OrderUpdate>
 }

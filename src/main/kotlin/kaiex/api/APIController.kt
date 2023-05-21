@@ -12,6 +12,7 @@ class APIController: KoinComponent {
 
     private val orderManager: OrderManager by inject()
     private val reportManager: ReportManager by inject()
+
     fun registerRoutes(route: Route) {
         route.get("/status") {
             val strategyList = listOf("one", "two", "three")

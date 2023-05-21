@@ -132,6 +132,23 @@ class DYDXAccountSocketEndpoint: DYDXSocketEndpoint<AccountUpdate> {
         val effectiveAt: String
     )
 
+//    "fundingPayments": [
+//    {
+//        "accountId": "8d6c86b2-3dd5-5683-b720-00095db9658c",
+//        "positionId": "9ea6049c-f1fd-5fa5-96cb-e3aae503cd04",
+//        "transactionId": "2805295",
+//        "market": "BTC-USD",
+//        "payment": "0.194443",
+//        "positionSize": "-0.46",
+//        "price": "26847.63557277619838714599609375",
+//        "rate": "0.0000157445794332",
+//        "effectiveAt": "2023-05-21T12:00:00.000Z",
+//        "id": "9051d272-ddf7-5fba-b17e-579eec0d3258",
+//        "updatedAt": "2023-05-21T12:00:15.437Z",
+//        "createdAt": "2023-05-21T12:00:15.437Z"
+//    }
+//    ]
+
     @Serializable
     data class Order(
         val id: String,

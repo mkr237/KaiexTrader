@@ -1,10 +1,15 @@
 package kaiex.strategy
 
+import kaiex.core.MarketDataManager
 import kaiex.core.OrderManager
 import kaiex.core.ReportManager
 import kaiex.indicator.Indicator
 import kaiex.model.*
-import kotlinx.coroutines.*
+import kaiex.ui.Chart
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.takeWhile
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import org.slf4j.Logger
@@ -19,54 +24,47 @@ abstract class KaiexBaseStrategy : KoinComponent, KaiexStrategy {
 
     protected val log: Logger = LoggerFactory.getLogger(javaClass.simpleName)
 
-    protected val marketDataTracker = MarketDataTracker(::onMarketData)
+    private val marketDataManager : MarketDataManager by inject()
     private val orderManager : OrderManager by inject()
-    protected val reportManager : ReportManager by inject()
-
-    private val orderUpdatesScope = CoroutineScope(Dispatchers.Default)
-
-    private val jobs = mutableListOf<Job>()
+    private val reportManager : ReportManager by inject()
 
     /**
      * Lifecycle functions
      */
-    override suspend fun onCreate() = runBlocking {
-        log.debug("onCreate()")
-        jobs.add(marketDataTracker.trackMarketInfo())
-        onStrategyCreate()
-        jobs.joinAll()
+    override suspend fun start() {
+        log.info("Starting strategy")
+        onCreate()
+        coroutineScope {
+            launch {
+                marketDataManager.startAndSubscribe(this)
+                    .takeWhile { snapshot -> snapshot.isNotEmpty() }
+                    .collect { snapshot -> onMarketData(snapshot) }
+            }
+
+            launch {
+                orderManager.startAndSubscribe(this)
+                    .takeWhile { update -> update.orders.isNotEmpty() || update.fills.isNotEmpty() || update.positions.isNotEmpty() }
+                    .collect { update -> update.orders.forEach { onOrderUpdate(it) } }
+            }
+        }
     }
 
-    override suspend fun onMarketData(snapshot: Map<String, MarketDataSnapshot>) {
-        log.debug("onMarketData($snapshot)")
-        onStrategyMarketData(snapshot)
+    override fun stop() = runBlocking {
+        log.info("Stopping strategy")
+        onDestroy()
     }
 
-    override suspend fun onOrderUpdate(update: OrderUpdate) {
-        log.debug("onOrderUpdate($update)")
-        onStrategyOrderUpdate(update)
-    }
-
-    override suspend fun onDestroy() = runBlocking {
-        log.debug("onDestroy()")
-        onStrategyDestroy()
-    }
-
-    abstract fun onStrategyCreate()
-    abstract fun onStrategyMarketData(snapshot: Map<String, MarketDataSnapshot>)
-    abstract fun onStrategyOrderUpdate(update: OrderUpdate)
-    abstract fun onStrategyDestroy()
+    abstract fun onCreate()
+    abstract fun onMarketData(snapshot: Map<String, MarketDataSnapshot>)
+    abstract fun onOrderUpdate(update: OrderUpdate)
+    abstract fun onDestroy()
 
     /**
      * Market data functions
      */
-    fun addTrades(symbol: String) {
-        jobs.add(marketDataTracker.trackTrades(symbol))
-    }
-
-    fun addIndicator(name:String, symbol: String, indicator: Indicator) {
-        marketDataTracker.addIndicator(name, symbol, indicator)
-    }
+    fun addSymbol(symbol: String) = marketDataManager.addSymbol(symbol)
+    fun addIndicator(name:String, symbol: String, indicator: Indicator) = marketDataManager.addIndicator(name, symbol, indicator)
+    fun addChart(chart: Chart) = reportManager.addChart(chart)
 
     /**
      * Order management functions
@@ -79,56 +77,57 @@ abstract class KaiexBaseStrategy : KoinComponent, KaiexStrategy {
         createOrder(symbol, OrderType.MARKET, OrderSide.SELL, 25000f, size, 0.015f, OrderTimeInForce.FOK)
 
     protected fun setPosition(symbol: String, target: Float) {
-        val orderSize = target - getCurrentPosition(symbol)
-        if(orderSize > 0)
-            createOrder(symbol, OrderType.MARKET, OrderSide.BUY, 35000f, orderSize.absoluteValue, 0.015f, OrderTimeInForce.FOK)
-        else if(orderSize < 0)
-            createOrder(symbol, OrderType.MARKET, OrderSide.SELL, 25000f, orderSize.absoluteValue, 0.015f, OrderTimeInForce.FOK)
+
+        val position =  orderManager.currentPosition(symbol)
+        val potentialPosition = orderManager.potentialPosition(symbol)
+
+        if (potentialPosition != position) {
+            log.info("Position mismatch - cannot send order")
+            return
+        }
+
+        val orderSize = target - position
+        if (orderSize > 0)
+            createOrder(
+                symbol,
+                OrderType.MARKET,
+                OrderSide.BUY,
+                35000f, // TODO calculate from index price or something
+                orderSize.absoluteValue,
+                0.015f,
+                OrderTimeInForce.FOK
+            )
+        else if (orderSize < 0)
+            createOrder(
+                symbol,
+                OrderType.MARKET,
+                OrderSide.SELL,
+                25000f,
+                orderSize.absoluteValue,
+                0.015f,
+                OrderTimeInForce.FOK
+            )
     }
 
     private fun createOrder(symbol: String,
-                                    type: OrderType,
-                                    side: OrderSide,
-                                    price: Float,
-                                    size: Float,
-                                    limitFee: Float,
-                                    timeInForce: OrderTimeInForce) {
+                            type: OrderType,
+                            side: OrderSide,
+                            price: Float,
+                            size: Float,
+                            limitFee: Float,
+                            timeInForce: OrderTimeInForce) {
 
-        orderManager.createOrder(symbol, type, side, price, size, limitFee, timeInForce).onSuccess { orderId ->
-
-            log.info("Successfully created order: $orderId")
-
-            orderUpdatesScope.launch {
-                // listen for order updates
-                orderManager.subscribeOrderUpdates(orderId).collect { update ->
-                    log.info("Received update for order: $orderId: $update")
-                    if(update.status == OrderStatus.FILLED) {
-                        log.info("Order ${update.orderId} is FILLED")
-                        throw CancellationException("Order ${update.orderId} is FILLED")
-                    }
-                }
+        orderManager.createOrder(symbol, type, side, price, size, limitFee, timeInForce)
+            .onSuccess { update ->
+                log.info("Successfully created order: ${update.orderId}")
             }
-
-            // TODO this coroutine will never end
-            orderUpdatesScope.launch {
-                // listen for order fills
-                orderManager.subscribeOrderFills(orderId).collect { fill ->
-                    log.info("Received fill for order: $orderId: $fill")
-//                    if(!symbols.contains(fill.symbol)) {
-//                        throw StrategyException("Received a fill for a unknown symbol: ${fill.symbol}")
-//                    }
-                }
+            .onFailure { e ->
+                log.error("Failed to create order: $e")
             }
-
-        }.onFailure { e ->
-            log.error("Failed to create order: $e")
-        }
     }
 
     /**
      * Misc. functions
      */
-    protected fun getCurrentPosition(symbol: String): Float {
-        return orderManager.positionMap[symbol]?.size ?: 0f
-    }
+    protected fun getCurrentPosition(symbol: String): Float = orderManager.currentPosition(symbol)
 }

@@ -37,16 +37,16 @@ class MACDStrategy(private val parameters: Map<String, String>): KaiexBaseStrate
         }
     }
 
-    override fun onStrategyCreate() {
-        log.info("onStrategyCreate: $parameters")
-        reportManager.addChart(chart)
-        addTrades(symbol)
+    override fun onCreate() {
+        log.info("onCreate: $parameters")
+        addSymbol(symbol)
         addIndicator("MACD", symbol, macd)
+        addChart(chart)
     }
 
-    override fun onStrategyMarketData(snapshot: Map<String, MarketDataSnapshot>) {
+    override fun onMarketData(snapshot: Map<String, MarketDataSnapshot>) {
 
-        log.info("onStrategyMarketData: $snapshot")
+        log.info("onMarketData: $snapshot")
 
         val candle = snapshot[symbol]?.lastCandle
         if (candle?.complete == true) {
@@ -72,11 +72,11 @@ class MACDStrategy(private val parameters: Map<String, String>): KaiexBaseStrate
         }
     }
 
-    override fun onStrategyOrderUpdate(update: OrderUpdate) {
-        log.info("onStrategyOrderUpdate: $update")
+    override fun onOrderUpdate(update: OrderUpdate) {
+        log.info("onOrderUpdate: $update")
     }
 
-    override fun onStrategyDestroy() {
-        log.info("onStrategyDestroy()")
+    override fun onDestroy() {
+        log.info("onDestroy()")
     }
 }

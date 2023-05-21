@@ -16,6 +16,6 @@ interface DYDXHttpEndpoint<T> {
         fun getURL() = base + ext
     }
 
-    suspend fun get(): Result<String>
-    suspend fun post(order: CreateOrder): Result<String>
+    suspend fun get(): Result<T>
+    suspend fun post(order: CreateOrder): Result<T>
 }

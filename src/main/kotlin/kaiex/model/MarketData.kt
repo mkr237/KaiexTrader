@@ -59,6 +59,7 @@ data class OrderBook (
 )
 
 data class MarketDataSnapshot (
+    var timestamp: Instant? = null,
     var marketInfo: MarketInfo? = null,
     var lastCandle: Candle? = null,
     var lastTrade: Trade? = null,

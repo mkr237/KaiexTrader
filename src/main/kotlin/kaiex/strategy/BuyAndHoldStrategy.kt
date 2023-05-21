@@ -25,7 +25,7 @@ class BuyAndHoldStrategy: KaiexBaseStrategy() {
 
     private var symbol:String? = null
 
-    override fun onStrategyCreate() {
+    override fun onCreate() {
         log.info("onStrategyCreate()")
         symbol = config.symbols[0]
 
@@ -34,19 +34,19 @@ class BuyAndHoldStrategy: KaiexBaseStrategy() {
         //buyAtMarket(symbol!!, 0.01f)
     }
 
-    override fun onStrategyMarketData(snapshot: Map<String, MarketDataSnapshot>) {
+    override fun onMarketData(snapshot: Map<String, MarketDataSnapshot>) {
         log.info("*** Received market data snapshot ***")
         log.info("Market Data Info: ${snapshot[symbol]?.marketInfo ?: "-"}")
         log.info("Last Candle: ${snapshot[symbol]?.lastCandle ?: "-"}")
         log.info("Last Order Book: ${snapshot[symbol]?.lastOrderBook ?: "-"}")
     }
 
-    override fun onStrategyOrderUpdate(update: OrderUpdate) {
+    override fun onOrderUpdate(update: OrderUpdate) {
         log.info("*** Received order update ***")
         log.info("Order Update: $update")
     }
 
-    override fun onStrategyDestroy() {
+    override fun onDestroy() {
         log.info("onStop()")
     }
 }

@@ -7,6 +7,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onEach
 import org.koin.core.component.KoinComponent
 import org.slf4j.Logger
@@ -24,17 +25,15 @@ class SimulatorService: KoinComponent, ExchangeService {
 
     private val positionBySymbol:MutableMap<String, PositionTracker> = mutableMapOf()
 
-    private val updateQueue = ArrayBlockingQueue<OrderUpdate>(1)
-    private val fillQueue = ArrayBlockingQueue<OrderFill>(1)
-    private val positionQueue = ArrayBlockingQueue<Position>(1)
+    private val updateQueue = ArrayBlockingQueue<AccountUpdate>(1)
+    private var complete = false
 
     override suspend fun subscribeAccountUpdates(accountId: String): Flow<AccountUpdate> {
         return flow {
             while(true) {
-                val orderUpdate = updateQueue.take()
-                val orderFill = fillQueue.take()
-                val positionUpdate = positionQueue.take()
-                emit(AccountUpdate(accountId, listOf(orderUpdate), listOf(orderFill), listOf(positionUpdate)))
+                val update = updateQueue.take()
+                emit(update)
+                if(update.orders.isEmpty() && update.fills.isEmpty() && update.positions.isEmpty()) break
             }
         }
     }
@@ -61,7 +60,8 @@ class SimulatorService: KoinComponent, ExchangeService {
                     )
 
                     // the strategy only needs one so we can end the flow
-                    throw CancellationException("Market information sent")
+                    log.info("Ending market information updates")
+                    break
                 }
             }
         }
@@ -70,9 +70,9 @@ class SimulatorService: KoinComponent, ExchangeService {
     override suspend fun subscribeTrades(symbol: String): Flow<Trade> {
         val dataFile = "Binance BTCUSDT-trades-2023-04-04.csv"
         log.info("Subscribing to: $dataFile")
-        return TickPlayer(dataFile, BinanceAdapter(symbol), relativeTime = false).start().onEach {
-            lastTrade = it
-        }
+        return TickPlayer(dataFile, BinanceAdapter(symbol), relativeTime = false).start()
+            .onCompletion { updateQueue.put(AccountUpdate("", emptyList(), emptyList(), emptyList())) }
+            .onEach { lastTrade = it }
     }
 
     override suspend fun subscribeCandles(symbol: String): Flow<Candle> {
@@ -83,7 +83,7 @@ class SimulatorService: KoinComponent, ExchangeService {
         TODO("Not yet implemented")
     }
 
-    override fun createOrder(order: CreateOrder): Result<String> {
+    override fun createOrder(order: CreateOrder): Result<OrderUpdate> {
 
         val fillPrice = lastTrade?.price
         val update = OrderUpdate(
@@ -132,9 +132,7 @@ class SimulatorService: KoinComponent, ExchangeService {
             Instant.now().epochSecond,  // TODO pull from tracker
             Instant.now().epochSecond)  // // TODO pull from tracker
 
-        updateQueue.put(update)
-        fillQueue.put(fill)
-        positionQueue.put(position)
-        return Result.success(order.orderId)
+        updateQueue.put(AccountUpdate(UUID.randomUUID().toString(), listOf(update), listOf(fill), listOf(position)))
+        return Result.success(update)
     }
 }

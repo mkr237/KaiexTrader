@@ -91,11 +91,11 @@ class DYDXOrderEndpoint: DYDXHttpEndpoint<OrderUpdate> {
         }
     }
 
-    override suspend fun get(): Result<String> {
+    override suspend fun get(): Result<OrderUpdate> {
         TODO("Not yet implemented")
     }
 
-    override suspend fun post(order: CreateOrder): Result<String> {
+    override suspend fun post(order: CreateOrder): Result<OrderUpdate> {
 
         log.info("Sending order: $order")
 
@@ -123,7 +123,7 @@ class DYDXOrderEndpoint: DYDXHttpEndpoint<OrderUpdate> {
             log.info("Got order response $orderResponse")
 
             val response = orderResponseToOrderUpdate(orderResponse)
-            Result.success(response.orderId)
+            Result.success(response)
 
         } catch(e: Exception) {
             Result.failure(e)

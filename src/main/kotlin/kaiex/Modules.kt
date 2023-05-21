@@ -5,12 +5,12 @@ import kaiex.core.*
 import kaiex.exchange.ExchangeService
 import kaiex.exchange.dydx.*
 import kaiex.exchange.simulator.SimulatorService
+import kaiex.core.MarketDataManager
 import org.koin.dsl.module
 
 val core = module {
-    single(createdAtStart = true) { AccountManager() }
+    single(createdAtStart = true) { MarketDataManager() }
     single(createdAtStart = true) { OrderManager() }
-    single(createdAtStart = true) { RiskManager() }
     single(createdAtStart = true) { ReportManager() }
 }
 
