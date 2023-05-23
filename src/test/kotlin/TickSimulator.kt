@@ -4,6 +4,7 @@ import kaiex.exchange.simulator.adapters.BinanceAdapter
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import java.time.Instant
 
 suspend fun main() {
 
@@ -25,7 +26,7 @@ suspend fun main() {
 
         async {
             println("Reading from file...")
-            var lastCandle: Long? = null
+            var lastCandle: Instant? = null
             TickPlayer("Binance BTCUSDT-trades-2023-04-04.csv", BinanceAdapter("BTCUSDT"), relativeTime = false).start()
                 .toCandles().collect { candle ->
 

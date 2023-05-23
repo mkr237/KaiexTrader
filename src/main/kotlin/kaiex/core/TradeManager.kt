@@ -9,6 +9,7 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.math.BigDecimal
 import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
@@ -23,7 +24,7 @@ class TradeManager : KoinComponent {
     private val orders : MutableMap<String, OrderUpdate> = ConcurrentHashMap() // update by OrderId
     private val fills : MutableMap<String, MutableList<OrderFill>> = ConcurrentHashMap()  // list of fills by orderId
     private val positions : MutableMap<String, MutableMap<String, Position>> = ConcurrentHashMap()  // map of positionId to position by symbol
-    private val potentialPositions : MutableMap<String, Float> = ConcurrentHashMap()  // potential position by symbol
+    private val potentialPositions : MutableMap<String, BigDecimal> = ConcurrentHashMap()  // potential position by symbol
 
     private val listener = MutableSharedFlow<AccountUpdate>()
 
@@ -66,9 +67,9 @@ class TradeManager : KoinComponent {
     fun createOrder(symbol: String,
                     type: OrderType,
                     side: OrderSide,
-                    price: Float,
-                    size: Float,
-                    limitFee: Float,
+                    price: BigDecimal,
+                    size: BigDecimal,
+                    limitFee: BigDecimal,
                     timeInForce: OrderTimeInForce
     ): Result<OrderUpdate> {
 
@@ -84,11 +85,11 @@ class TradeManager : KoinComponent {
             timeInForce,
             false,
             false,
-            Instant.now().toEpochMilli()
+            Instant.now()
         )
 
-        val signedSize = if(side == OrderSide.BUY) size else size * -1
-        potentialPositions[symbol] = potentialPositions.getOrDefault(symbol, 0f) + signedSize
+        val signedSize = if(side == OrderSide.BUY) size else size * BigDecimal.ONE.negate()
+        potentialPositions[symbol] = potentialPositions.getOrDefault(symbol, BigDecimal.ZERO) + signedSize
 
         log.info("Creating new order: $order")
         val result = exchangeService.createOrder(order)
@@ -108,12 +109,12 @@ class TradeManager : KoinComponent {
                 PositionSide.LONG -> it.size
                 PositionSide.SHORT -> -it.size
             }
-        } ?: 0f
-    fun potentialPosition(symbol: String) = potentialPositions.getOrDefault(symbol, 0f)
+        } ?: BigDecimal.ZERO
+    fun potentialPosition(symbol: String) = potentialPositions.getOrDefault(symbol, BigDecimal.ZERO)
     fun hasPendingOrders(symbol: String) = orders.values.any { order -> order.symbol == symbol && order.status == OrderStatus.PENDING }
 
     fun getTradeMetrics(): Metrics {  // TODO trade manager shouldn't know about UI stuff
-        var pnl = 0f
+        var pnl = BigDecimal.ZERO
         var numTrades = 0
         var numWins = 0
 
@@ -121,13 +122,13 @@ class TradeManager : KoinComponent {
             numTrades += positionMap.size
             positionMap.values.forEach { position ->
                 pnl += position.realizedPnl
-                if(position.realizedPnl > 0) numWins++
+                if(position.realizedPnl > BigDecimal.ZERO) numWins++
             }
         }
 
         val winRate = numWins.toFloat() / numTrades
-        val sharpe = 0f
+        val sharpe = BigDecimal.ZERO
 
-        return Metrics(pnl, numTrades, winRate, sharpe)
+        return Metrics(pnl.toDouble(), numTrades, winRate.toDouble(), sharpe.toDouble())
     }
 }

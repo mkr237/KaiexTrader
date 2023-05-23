@@ -198,10 +198,10 @@ class DYDXOrderBookSocketEndpoint(private val symbol:String): DYDXSocketEndpoint
         symbol,
         currentBids
             .filter { (_, value) -> value.size.toDouble() > 0.0 }
-            .map { (_, value) -> OrderBookEntry(value.size.toFloat(), value.price.toFloat()) },
+            .map { (_, value) -> OrderBookEntry(value.size.toBigDecimal(), value.price.toBigDecimal()) },
         currentAsks
             .filter { (_, value) -> value.size.toDouble() > 0.0 }
-            .map { (_, value) -> OrderBookEntry(value.size.toFloat(), value.price.toFloat()) },
+            .map { (_, value) -> OrderBookEntry(value.size.toBigDecimal(), value.price.toBigDecimal()) },
         Instant.now()
     )
 

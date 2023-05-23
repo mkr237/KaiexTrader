@@ -36,7 +36,7 @@ class PositionTracker(val symbol:String) {
                     createdAt = openPosition.createdAt,
                     sumOpen = openPosition.sumOpen + trade.size,
                     sumClose = openPosition.sumClose,
-                    netFunding = 0f,
+                    netFunding = BigDecimal.ZERO,
                     realizedPnl = openPosition.realizedPnl,
                     unrealisedPnl = openPosition.unrealisedPnl
                 )
@@ -57,7 +57,7 @@ class PositionTracker(val symbol:String) {
                         symbol = openPosition.symbol,
                         side = openPosition.side,
                         status = PositionStatus.CLOSED,
-                        size = 0f,
+                        size = BigDecimal.ZERO,
                         maxSize = openPosition.maxSize,
                         entryPrice = openPosition.entryPrice,
                         exitPrice = exitPrice,
@@ -69,7 +69,7 @@ class PositionTracker(val symbol:String) {
                         createdAt = openPosition.createdAt,
                         sumOpen = openPosition.sumOpen,
                         sumClose = sumClose,
-                        netFunding = 0f,
+                        netFunding = BigDecimal.ZERO,
                         realizedPnl = (exitPrice - openPosition.entryPrice) * sumClose,
                         unrealisedPnl = openPosition.unrealisedPnl
                     )
@@ -88,18 +88,18 @@ class PositionTracker(val symbol:String) {
                             size = trade.size - openPosition.size,
                             maxSize = trade.size - openPosition.size,
                             entryPrice = trade.price,
-                            exitPrice = 0f,
+                            exitPrice = BigDecimal.ZERO,
                             openTransactionId = trade.fillId,
                             closeTransactionId = "",
                             lastTransactionId = trade.fillId,
-                            closedAt = 0,
+                            closedAt = null,
                             updatedAt = trade.createdAt,
                             createdAt = trade.createdAt,
                             sumOpen = trade.size - openPosition.size,
-                            sumClose = 0f,
-                            netFunding = 0f,
-                            realizedPnl = 0f,
-                            unrealisedPnl = 0f
+                            sumClose = BigDecimal.ZERO,
+                            netFunding = BigDecimal.ZERO,
+                            realizedPnl = BigDecimal.ZERO,
+                            unrealisedPnl = BigDecimal.ZERO
                         )
                     }
 
@@ -123,7 +123,7 @@ class PositionTracker(val symbol:String) {
                         createdAt = openPosition.createdAt,
                         sumOpen = openPosition.sumOpen,
                         sumClose = openPosition.sumClose + trade.size,
-                        netFunding = 0f,
+                        netFunding = BigDecimal.ZERO,
                         realizedPnl = openPosition.realizedPnl,     // TODO - calculate P&L on what's been closed
                         unrealisedPnl = openPosition.unrealisedPnl
                     )
@@ -143,18 +143,18 @@ class PositionTracker(val symbol:String) {
                 size = trade.size,
                 maxSize = trade.size,
                 entryPrice = trade.price,
-                exitPrice = 0f,
+                exitPrice = BigDecimal.ZERO,
                 openTransactionId = trade.fillId,
                 closeTransactionId = "",
                 lastTransactionId = trade.fillId,
-                closedAt = 0,
+                closedAt = null,
                 updatedAt = trade.createdAt,
                 createdAt = trade.createdAt,
                 sumOpen = trade.size,
-                sumClose = 0f,
-                netFunding = 0f,
-                realizedPnl = 0f,
-                unrealisedPnl = 0f
+                sumClose = BigDecimal.ZERO,
+                netFunding = BigDecimal.ZERO,
+                realizedPnl = BigDecimal.ZERO,
+                unrealisedPnl = BigDecimal.ZERO
             )
         }
     }

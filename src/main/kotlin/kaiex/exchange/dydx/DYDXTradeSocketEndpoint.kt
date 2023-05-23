@@ -172,8 +172,8 @@ class DYDXTradeSocketEndpoint(private val symbol:String): DYDXSocketEndpoint<Tra
         tradesIn.reversed().forEach { trade ->
             trades.add(Trade(symbol,
                 OrderSide.valueOf(trade.side),
-                trade.size.toFloat(),
-                trade.price.toFloat(),
+                trade.size.toBigDecimal(),
+                trade.price.toBigDecimal(),
                 Instant.parse(trade.createdAt),
                 Instant.now().truncatedTo(ChronoUnit.MILLIS),
                 trade.liquidation,

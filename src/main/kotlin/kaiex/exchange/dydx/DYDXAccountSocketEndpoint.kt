@@ -18,6 +18,7 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.math.BigDecimal
 import java.time.Instant
 
 class DYDXAccountSocketEndpoint: DYDXSocketEndpoint<AccountUpdate> {
@@ -352,13 +353,13 @@ class DYDXAccountSocketEndpoint: DYDXSocketEndpoint<AccountUpdate> {
                 order.market,
                 OrderType.valueOf(order.type),
                 OrderSide.valueOf(order.side),
-                order.price.toFloat(),
-                order.size.toFloat(),
-                order.remainingSize.toFloat(),
+                order.price.toBigDecimal(),
+                order.size.toBigDecimal(),
+                order.remainingSize.toBigDecimal(),
                 OrderStatus.valueOf(order.status),
                 OrderTimeInForce.valueOf(order.timeInForce),
-                Instant.parse(order.createdAt).toEpochMilli(),
-                Instant.parse(order.expiresAt).toEpochMilli()
+                Instant.parse(order.createdAt),
+                Instant.parse(order.expiresAt)
             )
         }?: emptyList()
 
@@ -369,12 +370,12 @@ class DYDXAccountSocketEndpoint: DYDXSocketEndpoint<AccountUpdate> {
             fill.market,
             OrderType.valueOf(fill.type),
             OrderSide.valueOf(fill.side),
-            fill.price.toFloat(),
-            fill.size.toFloat(),
-            fill.fee.toFloat(),
+            fill.price.toBigDecimal(),
+            fill.size.toBigDecimal(),
+            fill.fee.toBigDecimal(),
             OrderRole.valueOf(fill.liquidity),
-            Instant.parse(fill.createdAt).toEpochMilli(),
-            Instant.parse(fill.updatedAt).toEpochMilli()
+            Instant.parse(fill.createdAt),
+            Instant.parse(fill.updatedAt)
         )
     }?: emptyList()
 
@@ -385,21 +386,21 @@ class DYDXAccountSocketEndpoint: DYDXSocketEndpoint<AccountUpdate> {
             position.key,
             PositionSide.valueOf(position.value.side),
             PositionStatus.valueOf(position.value.status),
-            position.value.size.toFloat(),
-            position.value.size.toFloat(),
-            position.value.entryPrice.toFloat(),
-            position.value.exitPrice?.toFloat() ?: 0f,
+            position.value.size.toBigDecimal(),
+            position.value.size.toBigDecimal(),
+            position.value.entryPrice.toBigDecimal(),
+            position.value.exitPrice?.toBigDecimal() ?: BigDecimal.ZERO,
             "",
             "",
             "",
-            Instant.parse(position.value.closedAt).toEpochMilli(),
-            0L,
-            Instant.parse(position.value.createdAt).toEpochMilli(),
-            position.value.sumOpen.toFloat(),
-            position.value.sumClose.toFloat(),
-            position.value.netFunding.toFloat(),
-            position.value.unrealizedPnl?.toFloat() ?: 0f,
-            position.value.realizedPnl.toFloat()
+            Instant.parse(position.value.closedAt),
+            Instant.now(),
+            Instant.parse(position.value.createdAt),
+            position.value.sumOpen.toBigDecimal(),
+            position.value.sumClose.toBigDecimal(),
+            position.value.netFunding.toBigDecimal(),
+            position.value.unrealizedPnl.toBigDecimal(),
+            position.value.realizedPnl.toBigDecimal()
         )
     }?: emptyList()
 
@@ -410,21 +411,21 @@ class DYDXAccountSocketEndpoint: DYDXSocketEndpoint<AccountUpdate> {
             position.market,
             PositionSide.valueOf(position.side),
             PositionStatus.valueOf(position.status),
-            position.size.toFloat(),
-            position.size.toFloat(),
-            position.entryPrice.toFloat(),
-            position.exitPrice?.toFloat() ?: 0f,
+            position.size.toBigDecimal(),
+            position.size.toBigDecimal(),
+            position.entryPrice.toBigDecimal(),
+            position.exitPrice?.toBigDecimal() ?: BigDecimal.ZERO,
             position.openTransactionId,
             position.closeTransactionId ?: "",
             position.lastTransactionId,
-            Instant.parse(position.closedAt).toEpochMilli(),
-            Instant.parse(position.updatedAt).toEpochMilli(),
-            Instant.parse(position.createdAt).toEpochMilli(),
-            position.sumOpen.toFloat(),
-            position.sumClose.toFloat(),
-            position.netFunding.toFloat(),
-            position.unrealisedPnl?.toFloat() ?: 0f,
-            position.realizedPnl.toFloat()
+            Instant.parse(position.closedAt),
+            Instant.parse(position.updatedAt),
+            Instant.parse(position.createdAt),
+            position.sumOpen.toBigDecimal(),
+            position.sumClose.toBigDecimal(),
+            position.netFunding.toBigDecimal(),
+            position.unrealisedPnl?.toBigDecimal() ?: BigDecimal.ZERO,
+            position.realizedPnl.toBigDecimal()
         )
     }?: emptyList()
 }

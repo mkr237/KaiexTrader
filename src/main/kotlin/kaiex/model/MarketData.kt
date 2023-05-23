@@ -2,6 +2,7 @@ package kaiex.model
 
 import kaiex.indicator.Indicator
 import kotlinx.coroutines.flow.Flow
+import java.math.BigDecimal
 import java.time.Instant
 
 enum class MarketStatus {
@@ -15,21 +16,21 @@ enum class MarketStatus {
 data class MarketInfo (
     val symbol:String,
     val status: MarketStatus,
-    val indexPrice: Float,
-    val oraclePrice: Float,
+    val indexPrice: BigDecimal,
+    val oraclePrice: BigDecimal,
     val createdAt: Instant
 )
 
 data class Candle (
     val symbol:String,
-    val startTimestamp: Long,
-    val lastUpdate: Long,
-    val open: Float,
-    val high: Float,
-    val low: Float,
-    val close: Float,
+    val startTimestamp: Instant,
+    val lastUpdate: Instant,
+    val open: BigDecimal,
+    val high: BigDecimal,
+    val low: BigDecimal,
+    val close: BigDecimal,
     val numTrades: Int,
-    val volume: Float,
+    val volume: BigDecimal,
     val historical: Boolean,
     val complete: Boolean
 )
@@ -37,8 +38,8 @@ data class Candle (
 data class Trade (
     val symbol:String,
     val side:OrderSide,
-    val size:Float,
-    val price:Float,
+    val size:BigDecimal,
+    val price:BigDecimal,
     val createdAt:Instant,
     val receivedAt:Instant,
     val liquidation:Boolean,
@@ -46,8 +47,8 @@ data class Trade (
 )
 
 data class OrderBookEntry (
-    val size:Float,
-    val price:Float
+    val size:BigDecimal,
+    val price:BigDecimal
 )
 
 data class OrderBook (

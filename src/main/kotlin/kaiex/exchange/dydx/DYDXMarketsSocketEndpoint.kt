@@ -18,6 +18,7 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.math.BigDecimal
 import java.time.Instant
 import kotlin.collections.List
 
@@ -182,11 +183,11 @@ class DYDXMarketsSocketEndpoint: DYDXSocketEndpoint<MarketInfo> {
         log.debug("Subscribed to $message")
         markets = mutableMapOf()
         message.contents.markets.forEach {
-            val marketInfo = MarketInfo(
+            val marketInfo = kaiex.model.MarketInfo(
                 symbol = it.key,
                 status = parseMarketStatus(it.value.status!!),
-                indexPrice = it.value.indexPrice?.toFloat() ?: 0f,
-                oraclePrice = it.value.oraclePrice?.toFloat() ?: 0f,
+                indexPrice = it.value.indexPrice?.toBigDecimal() ?: BigDecimal.ZERO,
+                oraclePrice = it.value.oraclePrice?.toBigDecimal() ?: BigDecimal.ZERO,
                 Instant.now()
             )
             markets[it.key] = marketInfo
@@ -207,11 +208,11 @@ class DYDXMarketsSocketEndpoint: DYDXSocketEndpoint<MarketInfo> {
         log.debug("Received channel data for $message")
         message.contents.forEach { update ->
             if(markets.containsKey(update.key)) {
-                val marketInfo = MarketInfo(
+                val marketInfo = kaiex.model.MarketInfo(
                     symbol = update.key,
                     status = MarketStatus.valueOf(update.value.status ?: markets[update.key]?.status.toString()),
-                    indexPrice = update.value.indexPrice?.toFloatOrNull() ?: markets[update.key]?.indexPrice!!,
-                    oraclePrice = update.value.oraclePrice?.toFloatOrNull() ?: markets[update.key]?.oraclePrice!!,
+                    indexPrice = update.value.indexPrice?.toBigDecimalOrNull() ?: markets[update.key]?.indexPrice!!,
+                    oraclePrice = update.value.oraclePrice?.toBigDecimalOrNull() ?: markets[update.key]?.oraclePrice!!,
                     Instant.now()
                 )
                 markets[update.key] = marketInfo

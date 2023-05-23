@@ -1,5 +1,8 @@
 package kaiex.model
 
+import java.math.BigDecimal
+import java.time.Instant
+
 enum class OrderType {
     MARKET,
     LIMIT,
@@ -43,21 +46,19 @@ enum class OrderRole {
     TAKER
 }
 
-// TODO the timestamp fields should be changed to Instant but that means the UI messages can't use them directly anymore
-
 data class CreateOrder(
     val orderId:String,
     val exchange:String,
     val symbol: String,
     val type:OrderType,
     val side:OrderSide,
-    val price: Float,
-    val size: Float,
-    val limitFee: Float,
+    val price: BigDecimal,
+    val size: BigDecimal,
+    val limitFee: BigDecimal,
     val timeInForce:OrderTimeInForce,
     val postOnly:Boolean,
     val reduceOnly: Boolean,
-    val createdAt: Long)
+    val createdAt: Instant)
 
 data class OrderUpdate(
     val orderId: String,
@@ -66,13 +67,13 @@ data class OrderUpdate(
     val symbol: String,
     val type:OrderType,
     val side:OrderSide,
-    val price: Float,
-    val size: Float,
-    val remainingSize: Float,
+    val price: BigDecimal,
+    val size: BigDecimal,
+    val remainingSize: BigDecimal,
     val status: OrderStatus,
     val timeInForce:OrderTimeInForce,
-    val createdAt: Long,
-    val expiresAt: Long
+    val createdAt: Instant,
+    val expiresAt: Instant
 )
 
 data class OrderFill(
@@ -81,12 +82,12 @@ data class OrderFill(
     val symbol: String,
     val type:OrderType,
     val side:OrderSide,
-    val price: Float,
-    val size: Float,
-    val fee: Float,
+    val price: BigDecimal,
+    val size: BigDecimal,
+    val fee: BigDecimal,
     val role: OrderRole,
-    val createdAt: Long,
-    val updatedAt: Long
+    val createdAt: Instant,
+    val updatedAt: Instant
 ) {
     fun isBuy() = side == OrderSide.BUY
     fun isSell() = side == OrderSide.SELL
@@ -98,21 +99,21 @@ data class Position(
     val symbol: String,
     val side: PositionSide,
     val status: PositionStatus,
-    val size: Float,
-    val maxSize: Float,
-    val entryPrice: Float,
-    val exitPrice: Float,
+    val size: BigDecimal,
+    val maxSize: BigDecimal,
+    val entryPrice: BigDecimal,
+    val exitPrice: BigDecimal,
     val openTransactionId: String,
     val closeTransactionId: String,
     val lastTransactionId: String,
-    val closedAt: Long,
-    val updatedAt: Long,
-    val createdAt: Long,
-    val sumOpen: Float,
-    val sumClose: Float,
-    val netFunding: Float,
-    val unrealisedPnl: Float,
-    val realizedPnl: Float)
+    val closedAt: Instant?,
+    val updatedAt: Instant,
+    val createdAt: Instant,
+    val sumOpen: BigDecimal,
+    val sumClose: BigDecimal,
+    val netFunding: BigDecimal,
+    val unrealisedPnl: BigDecimal,
+    val realizedPnl: BigDecimal)
 {
     fun isLong() = side == PositionSide.LONG
     fun isShort() = side == PositionSide.SHORT

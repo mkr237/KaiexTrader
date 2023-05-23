@@ -11,6 +11,7 @@ import org.koin.core.component.KoinComponent
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.math.BigDecimal
+import java.time.Duration
 import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.ArrayBlockingQueue
@@ -92,11 +93,11 @@ class SimulatorService: KoinComponent, ExchangeService {
             order.side,
             order.price,
             order.size,
-            0f,
+            BigDecimal.ZERO,
             OrderStatus.FILLED,
             order.timeInForce,
             order.createdAt,
-            order.createdAt + 60000L)
+            order.createdAt + Duration.ofHours(1))
 
         val fill = OrderFill(
             UUID.randomUUID().toString(),
@@ -106,10 +107,10 @@ class SimulatorService: KoinComponent, ExchangeService {
             order.side,
             fillPrice!!,
             order.size,
-            0f,
+            BigDecimal.ZERO,
             OrderRole.TAKER,
             order.createdAt,
-            Instant.now().toEpochMilli())
+            Instant.now())
 
         val positionTracker = positionBySymbol.computeIfAbsent(order.symbol) { PositionTracker(order.symbol) }
         positionTracker.addTrade(fill)

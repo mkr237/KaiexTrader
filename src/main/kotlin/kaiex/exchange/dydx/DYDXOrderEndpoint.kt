@@ -11,6 +11,7 @@ import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
+import kaiex.exchange.ExchangeException
 import kaiex.model.*
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.Serializable
@@ -19,6 +20,7 @@ import kotlinx.serialization.json.Json
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.math.BigInteger
+import java.time.Instant
 
 
 class DYDXOrderEndpoint: DYDXHttpEndpoint<OrderUpdate> {
@@ -192,13 +194,13 @@ class DYDXOrderEndpoint: DYDXHttpEndpoint<OrderUpdate> {
             symbol = orderResponse.order.market,
             type = OrderType.valueOf(orderResponse.order.type),
             side = OrderSide.valueOf(orderResponse.order.side),
-            price = orderResponse.order.price.toFloat(),
-            size = orderResponse.order.size.toFloat(),
-            remainingSize = orderResponse.order.remainingSize.toFloat(),
+            price = orderResponse.order.price.toBigDecimal(),
+            size = orderResponse.order.size.toBigDecimal(),
+            remainingSize = orderResponse.order.remainingSize.toBigDecimal(),
             status = OrderStatus.valueOf(orderResponse.order.status),
             timeInForce = OrderTimeInForce.valueOf(orderResponse.order.timeInForce),
-            createdAt = isoTimeStringToMillis(orderResponse.order.createdAt),
-            expiresAt = isoTimeStringToMillis(orderResponse.order.expiresAt)
+            createdAt = Instant.parse(orderResponse.order.createdAt) ?: throw ExchangeException("Cannot process order update: Invalid field createdAt: ${orderResponse.order.createdAt}"),
+            expiresAt = Instant.parse(orderResponse.order.expiresAt)?: throw ExchangeException("Cannot process order update: Invalid field expiresAt: ${orderResponse.order.expiresAt}")
         )
     }
 }

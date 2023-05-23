@@ -63,7 +63,7 @@ class MACDStrategy(private val parameters: Map<String, String>): KaiexBaseStrate
                 setPosition(symbol, -positionSize)
             }
 
-            chart.update(candle.startTimestamp) {
+            chart.update(candle.startTimestamp.toEpochMilli()) {
                 "Candles"(listOf(candle.open.toDouble(), candle.high.toDouble(), candle.low.toDouble(), candle.close.toDouble()))
                 "MACD"(macdLine)
                 "Signal"(signalLine)

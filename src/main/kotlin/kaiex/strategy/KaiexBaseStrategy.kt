@@ -14,6 +14,7 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.math.BigDecimal
 import kotlin.math.absoluteValue
 
 /**
@@ -71,10 +72,10 @@ abstract class KaiexBaseStrategy : KoinComponent, KaiexStrategy {
      */
     //TODO remove the hard-coded values
     protected fun buyAtMarket(symbol: String, size: Float) =
-        createOrder(symbol, OrderType.MARKET, OrderSide.BUY, 35000f, size, 0.015f, OrderTimeInForce.FOK)
+        createOrder(symbol, OrderType.MARKET, OrderSide.BUY, BigDecimal(35000), size.toBigDecimal(), BigDecimal(0.015), OrderTimeInForce.FOK)
 
     protected fun sellAtMarket(symbol: String, size: Float) =
-        createOrder(symbol, OrderType.MARKET, OrderSide.SELL, 25000f, size, 0.015f, OrderTimeInForce.FOK)
+        createOrder(symbol, OrderType.MARKET, OrderSide.SELL, BigDecimal(25000), size.toBigDecimal(), BigDecimal(0.015), OrderTimeInForce.FOK)
 
     protected fun setPosition(symbol: String, target: Float) {
 
@@ -86,25 +87,25 @@ abstract class KaiexBaseStrategy : KoinComponent, KaiexStrategy {
             return
         }
 
-        val orderSize = target - position
-        if (orderSize > 0)
+        val orderSize = target.toBigDecimal() - position
+        if (orderSize > BigDecimal.ZERO)
             createOrder(
                 symbol,
                 OrderType.MARKET,
                 OrderSide.BUY,
-                35000f, // TODO calculate from index price or something
-                orderSize.absoluteValue,
-                0.015f,
+                BigDecimal(35000), // TODO calculate from index price or something
+                orderSize.abs(),
+                BigDecimal(0.015),
                 OrderTimeInForce.FOK
             )
-        else if (orderSize < 0)
+        else if (orderSize < BigDecimal.ZERO)
             createOrder(
                 symbol,
                 OrderType.MARKET,
                 OrderSide.SELL,
-                25000f,
-                orderSize.absoluteValue,
-                0.015f,
+                BigDecimal(25000),
+                orderSize.abs(),
+                BigDecimal(0.015),
                 OrderTimeInForce.FOK
             )
     }
@@ -112,9 +113,9 @@ abstract class KaiexBaseStrategy : KoinComponent, KaiexStrategy {
     private fun createOrder(symbol: String,
                             type: OrderType,
                             side: OrderSide,
-                            price: Float,
-                            size: Float,
-                            limitFee: Float,
+                            price: BigDecimal,
+                            size: BigDecimal,
+                            limitFee: BigDecimal,
                             timeInForce: OrderTimeInForce) {
 
         tradeManager.createOrder(symbol, type, side, price, size, limitFee, timeInForce)
@@ -129,5 +130,5 @@ abstract class KaiexBaseStrategy : KoinComponent, KaiexStrategy {
     /**
      * Misc. functions
      */
-    protected fun getCurrentPosition(symbol: String): Float = tradeManager.currentPosition(symbol)
+    protected fun getCurrentPosition(symbol: String): BigDecimal = tradeManager.currentPosition(symbol)
 }

@@ -95,15 +95,15 @@ fun main() {
         }
     }
 
-    val timestamp1 = Instant.parse("2023-01-01T00:00:00Z").epochSecond
-    chart.update(timestamp1) {
+    val timestamp1 = Instant.parse("2023-01-01T00:00:00Z")
+    chart.update(timestamp1.toEpochMilli()) {
         "MACD"(105.0)
         "Signal"(101.0)
         "Candles"(listOf(100.0, 120.0, 90.0, 110.0))
     }
 
-    val timestamp2 = Instant.parse("2023-01-01T01:00:00Z").epochSecond
-    chart.update(timestamp2) {
+    val timestamp2 = Instant.parse("2023-01-01T01:00:00Z")
+    chart.update(timestamp2.toEpochMilli()) {
         "MACD"(106.0)
         "Signal"(102.0)
         "Candles"(listOf(101.0, 121.0, 91.0, 111.0))

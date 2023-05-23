@@ -7,10 +7,10 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class Metrics(
-    val pnl: Float,
+    val pnl: Double,
     val numTrades:Int,
-    val winRate:Float,
-    val sharpe:Float
+    val winRate:Double,
+    val sharpe:Double
 )
 
 @Serializable
@@ -21,9 +21,9 @@ data class Order(
     val symbol: String,
     val type: String,
     val side: String,
-    val price: Float,
-    val size: Float,
-    val remainingSize: Float,
+    val price: Double,
+    val size: Double,
+    val remainingSize: Double,
     val status: String,
     val timeInForce: String,
     val createdAt: Long,
@@ -34,9 +34,9 @@ data class Order(
 @Serializable
 data class Fill(
     val fillId: String,
-    val price: Float,
-    val size: Float,
-    val fee: Float,
+    val price: Double,
+    val size: Double,
+    val fee: Double,
     val role: String,
     val createdAt: Long,
     val updatedAt: Long
