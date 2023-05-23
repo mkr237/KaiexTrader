@@ -41,10 +41,8 @@ fun main(args: Array<String>) {
         emptyMap()
     }
 
-    // run strategy
+    // load required modules & run strategy
     CoroutineScope(Dispatchers.Default).launch {
-
-        // load required modules
         startKoin {
             modules(core)
             modules(apiModule)

@@ -1,21 +1,19 @@
 package kaiex.strategy
 
-import kaiex.core.MarketDataManager
-import kaiex.core.TradeManager
-import kaiex.core.ReportManager
+import kaiex.model.MarketDataManager
+import kaiex.model.TradeManager
+import kaiex.model.ReportManager
 import kaiex.indicator.Indicator
 import kaiex.model.*
 import kaiex.ui.Chart
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.math.BigDecimal
-import kotlin.math.absoluteValue
 
 /**
  * The base class for all strategies. Performs lifecycle activities, subscribes

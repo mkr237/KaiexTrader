@@ -1,8 +1,7 @@
-package kaiex.core
+package kaiex.model
 
 import kaiex.exchange.ExchangeService
-import kaiex.model.*
-import kaiex.ui.Metrics
+import kaiex.api.Metrics
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import org.koin.core.component.KoinComponent

@@ -1,8 +1,7 @@
-package kaiex.core
+package kaiex.model
 
 import kaiex.exchange.ExchangeService
 import kaiex.indicator.Indicator
-import kaiex.model.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch

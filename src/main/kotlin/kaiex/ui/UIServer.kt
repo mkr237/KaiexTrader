@@ -1,32 +1,5 @@
 package kaiex.ui
 
-import io.ktor.serialization.kotlinx.json.*
-import io.ktor.server.application.*
-import io.ktor.server.engine.*
-import io.ktor.server.netty.*
-import io.ktor.server.plugins.contentnegotiation.*
-import io.ktor.server.plugins.cors.routing.*
-import io.ktor.server.response.*
-import io.ktor.server.routing.*
-import io.ktor.server.websocket.*
-import io.ktor.websocket.*
-import io.ktor.websocket.CloseReason.Codes.*
-import kaiex.core.format
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.channels.ClosedReceiveChannelException
-import kotlinx.coroutines.launch
-import kotlinx.serialization.json.Json
-import org.koin.core.component.KoinComponent
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
-import java.util.*
-import java.util.concurrent.ConcurrentHashMap
-import kotlin.collections.component1
-import kotlin.collections.component2
-import kotlin.collections.set
-import kotlinx.serialization.encodeToString as myJsonEncode
-
 private const val CHANNEL_SIZE = 1000  // TODO too big?
 private const val HISTORY_SIZE = CHANNEL_SIZE
 private const val SERVER_PORT = 8081

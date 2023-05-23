@@ -1,11 +1,12 @@
 package kaiex
 
 import kaiex.api.APIController
-import kaiex.core.*
 import kaiex.exchange.ExchangeService
 import kaiex.exchange.dydx.*
 import kaiex.exchange.simulator.SimulatorService
-import kaiex.core.MarketDataManager
+import kaiex.model.MarketDataManager
+import kaiex.model.ReportManager
+import kaiex.model.TradeManager
 import org.koin.dsl.module
 
 val core = module {

@@ -3,10 +3,8 @@ package kaiex.api
 import io.ktor.server.application.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import kaiex.core.ReportManager
-import kaiex.core.TradeManager
-import kaiex.ui.Fill
-import kaiex.ui.Order
+import kaiex.model.ReportManager
+import kaiex.model.TradeManager
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
@@ -45,7 +43,34 @@ class APIController: KoinComponent {
         }
 
         route.get("/positions") {
-            call.respond(tradeManager.positionMap)
+            val positionMap = tradeManager.positionMap.mapValues { (_, innerMap) ->
+                innerMap.mapValues { (_, position) ->
+                    Position(
+                        position.positionId,
+                        position.accountId,
+                        position.symbol,
+                        position.side.toString(),
+                        position.status.toString(),
+                        position.size.toDouble(),
+                        position.size.toDouble(),
+                        position.entryPrice.toDouble(),
+                        position.exitPrice.toDouble(),
+                        position.openTransactionId,
+                        position.closeTransactionId,
+                        position.lastTransactionId,
+                        position.closedAt?.toEpochMilli() ?: 0L,
+                        position.updatedAt.toEpochMilli(),
+                        position.createdAt.toEpochMilli(),
+                        position.sumOpen.toDouble(),
+                        position.sumClose.toDouble(),
+                        position.netFunding.toDouble(),
+                        position.unrealisedPnl.toDouble(),
+                        position.realizedPnl.toDouble()
+                    )
+                }.toMutableMap()
+            }
+
+            call.respond(positionMap)
         }
     }
 }

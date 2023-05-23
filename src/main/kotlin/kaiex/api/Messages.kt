@@ -1,8 +1,5 @@
-package kaiex.ui
+package kaiex.api
 
-import kaiex.model.*
-import kaiex.model.OrderFill
-import kaiex.model.OrderUpdate
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -40,6 +37,30 @@ data class Fill(
     val role: String,
     val createdAt: Long,
     val updatedAt: Long
+)
+
+@Serializable
+data class Position(
+    val positionId:String,
+    val accountId: String,
+    val symbol: String,
+    val side: String,
+    val status: String,
+    val size: Double,
+    val maxSize: Double,
+    val entryPrice: Double,
+    val exitPrice: Double,
+    val openTransactionId: String,
+    val closeTransactionId: String,
+    val lastTransactionId: String,
+    val closedAt: Long,
+    val updatedAt: Long,
+    val createdAt: Long,
+    val sumOpen: Double,
+    val sumClose: Double,
+    val netFunding: Double,
+    val unrealisedPnl: Double,
+    val realizedPnl: Double
 )
 
 /*

@@ -393,7 +393,7 @@ class DYDXAccountSocketEndpoint: DYDXSocketEndpoint<AccountUpdate> {
             "",
             "",
             "",
-            Instant.parse(position.value.closedAt),
+            kotlin.runCatching { Instant.parse(position.value.closedAt) }.getOrNull(),
             Instant.now(),
             Instant.parse(position.value.createdAt),
             position.value.sumOpen.toBigDecimal(),
