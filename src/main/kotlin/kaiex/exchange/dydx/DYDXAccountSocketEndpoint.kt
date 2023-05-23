@@ -132,23 +132,6 @@ class DYDXAccountSocketEndpoint: DYDXSocketEndpoint<AccountUpdate> {
         val effectiveAt: String
     )
 
-//    "fundingPayments": [
-//    {
-//        "accountId": "8d6c86b2-3dd5-5683-b720-00095db9658c",
-//        "positionId": "9ea6049c-f1fd-5fa5-96cb-e3aae503cd04",
-//        "transactionId": "2805295",
-//        "market": "BTC-USD",
-//        "payment": "0.194443",
-//        "positionSize": "-0.46",
-//        "price": "26847.63557277619838714599609375",
-//        "rate": "0.0000157445794332",
-//        "effectiveAt": "2023-05-21T12:00:00.000Z",
-//        "id": "9051d272-ddf7-5fba-b17e-579eec0d3258",
-//        "updatedAt": "2023-05-21T12:00:15.437Z",
-//        "createdAt": "2023-05-21T12:00:15.437Z"
-//    }
-//    ]
-
     @Serializable
     data class Order(
         val id: String,
@@ -344,7 +327,7 @@ class DYDXAccountSocketEndpoint: DYDXSocketEndpoint<AccountUpdate> {
             message.id,
             convertOrders(message.contents.orders),
             emptyList(),
-            emptyList() // TODO convert open positions
+            convertOpenPositions(message.contents.account.id, message.contents.account.openPositions)
         )
     }
 
@@ -374,8 +357,8 @@ class DYDXAccountSocketEndpoint: DYDXSocketEndpoint<AccountUpdate> {
                 order.remainingSize.toFloat(),
                 OrderStatus.valueOf(order.status),
                 OrderTimeInForce.valueOf(order.timeInForce),
-                Instant.parse(order.createdAt).epochSecond,
-                Instant.parse(order.expiresAt).epochSecond
+                Instant.parse(order.createdAt).toEpochMilli(),
+                Instant.parse(order.expiresAt).toEpochMilli()
             )
         }?: emptyList()
 
@@ -390,22 +373,58 @@ class DYDXAccountSocketEndpoint: DYDXSocketEndpoint<AccountUpdate> {
             fill.size.toFloat(),
             fill.fee.toFloat(),
             OrderRole.valueOf(fill.liquidity),
-            Instant.parse(fill.createdAt).epochSecond,
-            Instant.parse(fill.updatedAt).epochSecond
+            Instant.parse(fill.createdAt).toEpochMilli(),
+            Instant.parse(fill.updatedAt).toEpochMilli()
+        )
+    }?: emptyList()
+
+    private fun convertOpenPositions(accountId: String, positions:Map<String, OpenPosition>?) = positions?.map { position ->
+        kaiex.model.Position(
+            "",
+            accountId,
+            position.key,
+            PositionSide.valueOf(position.value.side),
+            PositionStatus.valueOf(position.value.status),
+            position.value.size.toFloat(),
+            position.value.size.toFloat(),
+            position.value.entryPrice.toFloat(),
+            position.value.exitPrice?.toFloat() ?: 0f,
+            "",
+            "",
+            "",
+            Instant.parse(position.value.closedAt).toEpochMilli(),
+            0L,
+            Instant.parse(position.value.createdAt).toEpochMilli(),
+            position.value.sumOpen.toFloat(),
+            position.value.sumClose.toFloat(),
+            position.value.netFunding.toFloat(),
+            position.value.unrealizedPnl?.toFloat() ?: 0f,
+            position.value.realizedPnl.toFloat()
         )
     }?: emptyList()
 
     private fun convertPositions(positions:List<Position>?) = positions?.map { position ->
-        Position(
+        kaiex.model.Position(
             position.id,
+            position.accountId,
             position.market,
             PositionSide.valueOf(position.side),
+            PositionStatus.valueOf(position.status),
+            position.size.toFloat(),
+            position.size.toFloat(),
             position.entryPrice.toFloat(),
             position.exitPrice?.toFloat() ?: 0f,
-            position.size.toFloat(),
+            position.openTransactionId,
+            position.closeTransactionId ?: "",
+            position.lastTransactionId,
+            Instant.parse(position.closedAt).toEpochMilli(),
+            Instant.parse(position.updatedAt).toEpochMilli(),
+            Instant.parse(position.createdAt).toEpochMilli(),
+            position.sumOpen.toFloat(),
+            position.sumClose.toFloat(),
+            position.netFunding.toFloat(),
             position.unrealisedPnl?.toFloat() ?: 0f,
-            Instant.parse(position.createdAt).epochSecond,
-            position.closedAt?.let { Instant.parse(it).epochSecond } ?: 0
+            position.realizedPnl.toFloat()
         )
     }?: emptyList()
 }

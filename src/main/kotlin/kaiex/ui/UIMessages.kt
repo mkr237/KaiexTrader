@@ -1,9 +1,48 @@
 package kaiex.ui
 
+import kaiex.model.*
 import kaiex.model.OrderFill
 import kaiex.model.OrderUpdate
 import kotlinx.serialization.Serializable
 
+@Serializable
+data class Metrics(
+    val pnl: Float,
+    val numTrades:Int,
+    val winRate:Float,
+    val sharpe:Float
+)
+
+@Serializable
+data class Order(
+    val orderId: String,
+    val exchangeId: String,
+    val accountId:String,
+    val symbol: String,
+    val type: String,
+    val side: String,
+    val price: Float,
+    val size: Float,
+    val remainingSize: Float,
+    val status: String,
+    val timeInForce: String,
+    val createdAt: Long,
+    val expiresAt: Long,
+    val fills: List<Fill>
+)
+
+@Serializable
+data class Fill(
+    val fillId: String,
+    val price: Float,
+    val size: Float,
+    val fee: Float,
+    val role: String,
+    val createdAt: Long,
+    val updatedAt: Long
+)
+
+/*
 @Serializable
 sealed class Message {
     abstract val sequenceNumber:Long
@@ -97,3 +136,4 @@ sealed class SeriesUpdate {
         val close: Double
     ) : SeriesUpdate()
 }
+*/

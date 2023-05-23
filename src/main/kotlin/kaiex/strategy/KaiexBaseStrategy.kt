@@ -1,7 +1,7 @@
 package kaiex.strategy
 
 import kaiex.core.MarketDataManager
-import kaiex.core.OrderManager
+import kaiex.core.TradeManager
 import kaiex.core.ReportManager
 import kaiex.indicator.Indicator
 import kaiex.model.*
@@ -25,7 +25,7 @@ abstract class KaiexBaseStrategy : KoinComponent, KaiexStrategy {
     protected val log: Logger = LoggerFactory.getLogger(javaClass.simpleName)
 
     private val marketDataManager : MarketDataManager by inject()
-    private val orderManager : OrderManager by inject()
+    private val tradeManager : TradeManager by inject()
     private val reportManager : ReportManager by inject()
 
     /**
@@ -42,14 +42,14 @@ abstract class KaiexBaseStrategy : KoinComponent, KaiexStrategy {
             }
 
             launch {
-                orderManager.startAndSubscribe(this)
+                tradeManager.startAndSubscribe(this)
                     .takeWhile { update -> update.orders.isNotEmpty() || update.fills.isNotEmpty() || update.positions.isNotEmpty() }
                     .collect { update -> update.orders.forEach { onOrderUpdate(it) } }
             }
         }
     }
 
-    override fun stop() = runBlocking {
+    override suspend fun stop() {
         log.info("Stopping strategy")
         onDestroy()
     }
@@ -78,8 +78,8 @@ abstract class KaiexBaseStrategy : KoinComponent, KaiexStrategy {
 
     protected fun setPosition(symbol: String, target: Float) {
 
-        val position =  orderManager.currentPosition(symbol)
-        val potentialPosition = orderManager.potentialPosition(symbol)
+        val position =  tradeManager.currentPosition(symbol)
+        val potentialPosition = tradeManager.potentialPosition(symbol)
 
         if (potentialPosition != position) {
             log.info("Position mismatch - cannot send order")
@@ -117,7 +117,7 @@ abstract class KaiexBaseStrategy : KoinComponent, KaiexStrategy {
                             limitFee: Float,
                             timeInForce: OrderTimeInForce) {
 
-        orderManager.createOrder(symbol, type, side, price, size, limitFee, timeInForce)
+        tradeManager.createOrder(symbol, type, side, price, size, limitFee, timeInForce)
             .onSuccess { update ->
                 log.info("Successfully created order: ${update.orderId}")
             }
@@ -129,5 +129,5 @@ abstract class KaiexBaseStrategy : KoinComponent, KaiexStrategy {
     /**
      * Misc. functions
      */
-    protected fun getCurrentPosition(symbol: String): Float = orderManager.currentPosition(symbol)
+    protected fun getCurrentPosition(symbol: String): Float = tradeManager.currentPosition(symbol)
 }

@@ -78,5 +78,6 @@ class MACDStrategy(private val parameters: Map<String, String>): KaiexBaseStrate
 
     override fun onDestroy() {
         log.info("onDestroy()")
+        //setPosition(symbol, 0f)
     }
 }

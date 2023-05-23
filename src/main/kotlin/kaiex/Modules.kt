@@ -10,7 +10,7 @@ import org.koin.dsl.module
 
 val core = module {
     single(createdAtStart = true) { MarketDataManager() }
-    single(createdAtStart = true) { OrderManager() }
+    single(createdAtStart = true) { TradeManager() }
     single(createdAtStart = true) { ReportManager() }
 }
 

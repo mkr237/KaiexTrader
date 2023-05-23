@@ -23,7 +23,7 @@ class TickPlayer(val fileName: String, val adapter: TickAdapter, val relativeTim
 
     protected val log: Logger = LoggerFactory.getLogger(javaClass.simpleName)
 
-    private val MAX_TICKS = 30000
+    private val MAX_TICKS = 300000
 
     fun start(): Flow<Trade> = flow {
         val file = File(Thread.currentThread().contextClassLoader.getResource(fileName).toURI())

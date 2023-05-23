@@ -1,8 +1,8 @@
 package kaiex.core
 
 import kaiex.exchange.ExchangeService
-import kaiex.exchange.dydx.DYDXExchangeService
 import kaiex.model.*
+import kaiex.ui.Metrics
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import org.koin.core.component.KoinComponent
@@ -13,17 +13,17 @@ import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
-class OrderManager : KoinComponent {
+class TradeManager : KoinComponent {
 
     private val exchange = "DYDX" // only support DYDX for now
 
     private val log: Logger = LoggerFactory.getLogger(javaClass.simpleName)
     private val exchangeService: ExchangeService by inject()
 
-    private val orders : MutableMap<String, OrderUpdate> = ConcurrentHashMap() // by OrderId
-    private val fills : MutableMap<String, MutableList<OrderFill>> = ConcurrentHashMap()  // by orderId
-    private val positions : MutableMap<String, Position> = ConcurrentHashMap()  // by symbol
-    private val potentialPositions : MutableMap<String, Float> = ConcurrentHashMap()  // by symbol
+    private val orders : MutableMap<String, OrderUpdate> = ConcurrentHashMap() // update by OrderId
+    private val fills : MutableMap<String, MutableList<OrderFill>> = ConcurrentHashMap()  // list of fills by orderId
+    private val positions : MutableMap<String, MutableMap<String, Position>> = ConcurrentHashMap()  // map of positionId to position by symbol
+    private val potentialPositions : MutableMap<String, Float> = ConcurrentHashMap()  // potential position by symbol
 
     private val listener = MutableSharedFlow<AccountUpdate>()
 
@@ -31,7 +31,7 @@ class OrderManager : KoinComponent {
         get() = orders.toMap()
     val fillMap : Map<String, MutableList<OrderFill>>
         get() = fills.toMap()
-    val positionMap : Map<String, Position>
+    val positionMap : Map<String, MutableMap<String, Position>>
         get() = positions.toMap()
 
     suspend fun startAndSubscribe(scope: CoroutineScope): SharedFlow<AccountUpdate> {
@@ -51,20 +51,15 @@ class OrderManager : KoinComponent {
     private fun handleAccountUpdate(accountUpdate: AccountUpdate) {
         log.info("Received Account Update: $accountUpdate")
 
-        // handle order updates
         accountUpdate.orders.forEach { update ->
             orders[update.orderId] = update
             // TODO if order has been cancelled, we need to reduce potential position
         }
 
-        // handle fills
-        accountUpdate.fills.forEach { fill ->
-            fills.getOrPut(fill.orderId) { mutableListOf() }.add(fill)
-        }
-
-        // handle position updates
+        accountUpdate.fills.forEach { fill -> fills.getOrPut(fill.orderId) { mutableListOf() }.add(fill) }
         accountUpdate.positions.forEach { position ->
-            positions[position.symbol] = position
+            val positionMap = positions.computeIfAbsent(position.symbol) { mutableMapOf() }
+            positionMap[position.positionId] = position
         }
     }
 
@@ -89,7 +84,7 @@ class OrderManager : KoinComponent {
             timeInForce,
             false,
             false,
-            Instant.now().epochSecond
+            Instant.now().toEpochMilli()
         )
 
         val signedSize = if(side == OrderSide.BUY) size else size * -1
@@ -108,7 +103,31 @@ class OrderManager : KoinComponent {
 
     // TODO cancel/amend etc
 
-    fun currentPosition(symbol: String) = positions[symbol]?.size ?: 0f
+    fun currentPosition(symbol: String) = positions[symbol]?.values?.firstOrNull { it.status == PositionStatus.OPEN }?.let {
+            when (it.side) {
+                PositionSide.LONG -> it.size
+                PositionSide.SHORT -> -it.size
+            }
+        } ?: 0f
     fun potentialPosition(symbol: String) = potentialPositions.getOrDefault(symbol, 0f)
     fun hasPendingOrders(symbol: String) = orders.values.any { order -> order.symbol == symbol && order.status == OrderStatus.PENDING }
+
+    fun getTradeMetrics(): Metrics {  // TODO trade manager shouldn't know about UI stuff
+        var pnl = 0f
+        var numTrades = 0
+        var numWins = 0
+
+        positions.values.forEach { positionMap ->
+            numTrades += positionMap.size
+            positionMap.values.forEach { position ->
+                pnl += position.realizedPnl
+                if(position.realizedPnl > 0) numWins++
+            }
+        }
+
+        val winRate = numWins.toFloat() / numTrades
+        val sharpe = 0f
+
+        return Metrics(pnl, numTrades, winRate, sharpe)
+    }
 }

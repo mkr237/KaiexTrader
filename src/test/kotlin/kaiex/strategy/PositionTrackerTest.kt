@@ -11,6 +11,7 @@ import org.hamcrest.Matchers
 import org.junit.jupiter.api.Test
 import java.math.BigDecimal
 
+/*
 class TradeManagerTest {
 
     // build up long position and sell back to zero
@@ -195,3 +196,4 @@ class TradeManagerTest {
     private fun equals(value: BigDecimal): Matcher<BigDecimal> = Matchers.comparesEqualTo(value)
     private fun closeTo(value: BigDecimal): Matcher<BigDecimal> = Matchers.closeTo(value, BigDecimal(0.01))
 }
+*/

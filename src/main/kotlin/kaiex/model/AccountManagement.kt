@@ -2,8 +2,6 @@ package kaiex.model
 
 import kotlinx.coroutines.flow.Flow
 
-//interface AccountInfo
-
 data class AccountUpdate(
     val id:String,
     // TODO what about the other fields?

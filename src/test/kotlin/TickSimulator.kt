@@ -1,5 +1,4 @@
 import kaiex.indicator.MACD
-import kaiex.ui.UIServer
 import kaiex.exchange.simulator.TickPlayer
 import kaiex.exchange.simulator.adapters.BinanceAdapter
 import kotlinx.coroutines.async
@@ -9,7 +8,6 @@ import kotlinx.coroutines.delay
 suspend fun main() {
 
     val route = "/Simulator"
-    val ui = UIServer()
 
     val macd = MACD(12, 26, 9)
 

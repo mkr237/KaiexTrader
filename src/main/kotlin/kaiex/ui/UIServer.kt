@@ -30,7 +30,7 @@ import kotlinx.serialization.encodeToString as myJsonEncode
 private const val CHANNEL_SIZE = 1000  // TODO too big?
 private const val HISTORY_SIZE = CHANNEL_SIZE
 private const val SERVER_PORT = 8081
-
+/*
 class UIServer : KoinComponent {
 
     private val simpleName = javaClass.simpleName
@@ -158,3 +158,4 @@ class UIServer : KoinComponent {
         inputQueue.trySend(StrategyMarketDataUpdateMessage(++sequenceNumber, update))
     }
 }
+*/

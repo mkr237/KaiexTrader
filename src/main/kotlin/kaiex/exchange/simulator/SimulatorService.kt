@@ -3,8 +3,6 @@ package kaiex.exchange.simulator
 import kaiex.exchange.ExchangeService
 import kaiex.exchange.simulator.adapters.BinanceAdapter
 import kaiex.model.*
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onCompletion
@@ -26,7 +24,6 @@ class SimulatorService: KoinComponent, ExchangeService {
     private val positionBySymbol:MutableMap<String, PositionTracker> = mutableMapOf()
 
     private val updateQueue = ArrayBlockingQueue<AccountUpdate>(1)
-    private var complete = false
 
     override suspend fun subscribeAccountUpdates(accountId: String): Flow<AccountUpdate> {
         return flow {
@@ -45,7 +42,7 @@ class SimulatorService: KoinComponent, ExchangeService {
 
                     // update the index price of relevant position tracker(s)
                     if(!positionBySymbol.containsKey("BTC-USD")) {
-                        positionBySymbol["BTC-USD"]?.updatePrice(lastTrade!!.price)
+                        //positionBySymbol["BTC-USD"]?.updatePrice(lastTrade!!.price)
                     }
 
                     // send the update
@@ -99,7 +96,7 @@ class SimulatorService: KoinComponent, ExchangeService {
             OrderStatus.FILLED,
             order.timeInForce,
             order.createdAt,
-            order.createdAt + 1000L)
+            order.createdAt + 60000L)
 
         val fill = OrderFill(
             UUID.randomUUID().toString(),
@@ -112,27 +109,11 @@ class SimulatorService: KoinComponent, ExchangeService {
             0f,
             OrderRole.TAKER,
             order.createdAt,
-            Instant.now().epochSecond)
+            Instant.now().toEpochMilli())
 
-        if(!positionBySymbol.containsKey(fill.symbol)) {
-            positionBySymbol[fill.symbol] = PositionTracker()
-        }
-
-        val p = positionBySymbol[fill.symbol]!!
-        p.addTrade(fill)
-
-        val position = Position(
-            UUID.randomUUID().toString(),
-            fill.symbol,
-            if(p.positionSize > BigDecimal.ZERO) PositionSide.LONG else PositionSide.SHORT,
-            p.avgEntryPrice.toFloat(),
-            p.avgExitPrice.toFloat(),
-            p.positionSize.toFloat(),
-            p.unrealizedPnl.toFloat(),
-            Instant.now().epochSecond,  // TODO pull from tracker
-            Instant.now().epochSecond)  // // TODO pull from tracker
-
-        updateQueue.put(AccountUpdate(UUID.randomUUID().toString(), listOf(update), listOf(fill), listOf(position)))
+        val positionTracker = positionBySymbol.computeIfAbsent(order.symbol) { PositionTracker(order.symbol) }
+        positionTracker.addTrade(fill)
+        updateQueue.put(AccountUpdate(UUID.randomUUID().toString(), listOf(update), listOf(fill), positionTracker.positionList))
         return Result.success(update)
     }
 }
