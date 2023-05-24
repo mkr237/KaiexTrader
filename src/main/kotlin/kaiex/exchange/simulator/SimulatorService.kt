@@ -1,5 +1,6 @@
 package kaiex.exchange.simulator
 
+import kaiex.exchange.ExchangeException
 import kaiex.exchange.ExchangeService
 import kaiex.exchange.simulator.adapters.BinanceAdapter
 import kaiex.model.*
@@ -13,6 +14,7 @@ import org.koin.core.component.KoinComponent
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.math.BigDecimal
+import java.math.BigInteger
 import java.time.Duration
 import java.time.Instant
 import java.util.UUID
@@ -50,11 +52,31 @@ class SimulatorService: KoinComponent, ExchangeService {
                     // send the update
                     emit(
                         MarketInfo(
-                            "BTC-USD",
-                            MarketStatus.ONLINE,
-                            lastTrade?.price!!,
-                            lastTrade?.price!!,
-                            lastTrade?.createdAt!!
+                            symbol = "BTC-USD",
+                            status = MarketStatus.ONLINE,
+                            indexPrice = lastTrade?.price!!,
+                            oraclePrice = lastTrade?.price!!,
+                            baseAsset = "BTC",
+                            quoteAsset = "USD",
+                            stepSize = BigDecimal.ZERO,
+                            tickSize = BigDecimal.ZERO,
+                            priceChange24H = BigDecimal.ZERO,
+                            nextFundingRate = BigDecimal.ZERO,
+                            nextFundingAt = Instant.now() + Duration.ofHours(1),
+                            minOrderSize = BigDecimal.ZERO,
+                            type = MarketType.PERPETUAL,
+                            initialMarginFraction = BigDecimal.ZERO,
+                            maintenanceMarginFraction = BigDecimal.ZERO,
+                            transferMarginFraction = BigDecimal.ZERO,
+                            volume24H = BigDecimal.ZERO,
+                            trades24H = 0,
+                            openInterest = BigDecimal.ZERO,
+                            incrementalInitialMarginFraction = BigDecimal.ZERO,
+                            incrementalPositionSize = BigDecimal.ZERO,
+                            maxPositionSize = BigDecimal.ZERO,
+                            baselinePositionSize = BigDecimal.ZERO,
+                            assetResolution = BigInteger.ZERO,
+                            syntheticAssetId = ""
                         )
                     )
 

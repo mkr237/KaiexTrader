@@ -125,7 +125,7 @@ class TradeManager : KoinComponent {
             }
         }
 
-        val winRate = numWins.toFloat() / numTrades
+        val winRate = if(numTrades > 0) numWins.toFloat() / numTrades else 0
         val sharpe = BigDecimal.ZERO
 
         return Metrics(pnl.toDouble(), numTrades, winRate.toDouble(), sharpe.toDouble())

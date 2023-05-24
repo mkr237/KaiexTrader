@@ -3,6 +3,7 @@ package kaiex.model
 import kaiex.indicator.Indicator
 import kotlinx.coroutines.flow.Flow
 import java.math.BigDecimal
+import java.math.BigInteger
 import java.time.Instant
 
 enum class MarketStatus {
@@ -13,12 +14,36 @@ enum class MarketStatus {
     CLOSE_ONLY
 }
 
+enum class MarketType {
+    PERPETUAL
+}
+
 data class MarketInfo (
     val symbol:String,
     val status: MarketStatus,
+    val baseAsset: String,
+    val quoteAsset: String,
+    val stepSize: BigDecimal,
+    val tickSize: BigDecimal,
     val indexPrice: BigDecimal,
     val oraclePrice: BigDecimal,
-    val createdAt: Instant
+    val priceChange24H: BigDecimal,
+    val nextFundingRate: BigDecimal,
+    val nextFundingAt: Instant,
+    val minOrderSize: BigDecimal,
+    val type: MarketType,
+    val initialMarginFraction: BigDecimal,
+    val maintenanceMarginFraction: BigDecimal,
+    val transferMarginFraction: BigDecimal,
+    val volume24H: BigDecimal,
+    val trades24H: Int,
+    val openInterest: BigDecimal,
+    val incrementalInitialMarginFraction: BigDecimal,
+    val incrementalPositionSize: BigDecimal,
+    val maxPositionSize: BigDecimal,
+    val baselinePositionSize: BigDecimal,
+    val assetResolution: BigInteger,
+    val syntheticAssetId: String
 )
 
 data class Candle (

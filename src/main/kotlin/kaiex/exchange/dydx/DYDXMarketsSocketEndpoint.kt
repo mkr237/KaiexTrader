@@ -8,6 +8,7 @@ import io.ktor.client.plugins.websocket.*
 import io.ktor.client.request.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.websocket.*
+import kaiex.exchange.ExchangeException
 import kaiex.model.*
 import kaiex.util.Resource
 import kotlinx.coroutines.flow.*
@@ -19,6 +20,7 @@ import kotlinx.serialization.json.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.math.BigDecimal
+import java.math.BigInteger
 import java.time.Instant
 import kotlin.collections.List
 
@@ -164,8 +166,8 @@ class DYDXMarketsSocketEndpoint: DYDXSocketEndpoint<MarketInfo> {
                     val json = (it as? Frame.Text)?.readText() ?: ""
                     when(val dydxMarketsUpdate = Json.decodeFromString<Message>(json)) {
                         is Connected -> onConnected(dydxMarketsUpdate)
-                        is Subscribed -> onSubscribed(dydxMarketsUpdate).forEach{ market -> emit(market) }
-                        is ChannelData -> onChannelData(dydxMarketsUpdate).forEach{ market -> emit(market) }
+                        is Subscribed -> onSubscribed(dydxMarketsUpdate).values.forEach{ market -> emit(market) }
+                        is ChannelData -> onChannelData(dydxMarketsUpdate).values.forEach{ market -> emit(market) }
                     }
                 }
                 ?: flow { }
@@ -179,24 +181,80 @@ class DYDXMarketsSocketEndpoint: DYDXSocketEndpoint<MarketInfo> {
         log.info("Connected with connection_id: ${message.connection_id}")
     }
 
-    private fun onSubscribed(message: Subscribed):List<kaiex.model.MarketInfo> {
+    private fun onSubscribed(message: Subscribed):Map<String, kaiex.model.MarketInfo> {
         log.debug("Subscribed to $message")
         markets = mutableMapOf()
-        message.contents.markets.forEach {
-            val marketInfo = kaiex.model.MarketInfo(
-                symbol = it.key,
-                status = parseMarketStatus(it.value.status!!),
-                indexPrice = it.value.indexPrice?.toBigDecimal() ?: BigDecimal.ZERO,
-                oraclePrice = it.value.oraclePrice?.toBigDecimal() ?: BigDecimal.ZERO,
-                Instant.now()
+        message.contents.markets.forEach { (symbol, data) ->
+            markets[symbol] = MarketInfo(
+                symbol = symbol,
+                status = parseMarketStatus(data.status!!),
+                indexPrice = data.indexPrice?.toBigDecimal() ?: BigDecimal.ZERO,
+                oraclePrice = data.oraclePrice?.toBigDecimal() ?: BigDecimal.ZERO,
+                baseAsset = data.baseAsset ?: "",
+                quoteAsset = data.quoteAsset ?: "",
+                stepSize = data.stepSize?.toBigDecimal() ?: BigDecimal.ZERO,
+                tickSize = data.tickSize?.toBigDecimal() ?: BigDecimal.ZERO,
+                priceChange24H = data.priceChange24H?.toBigDecimal() ?: BigDecimal.ZERO,
+                nextFundingRate = data.nextFundingRate?.toBigDecimal() ?: BigDecimal.ZERO,
+                nextFundingAt = parseNextFundingAt(data.nextFundingAt!!),
+                minOrderSize = data.minOrderSize?.toBigDecimal() ?: BigDecimal.ZERO,
+                type = parseMarketType(data.type!!),
+                initialMarginFraction = data.initialMarginFraction?.toBigDecimal() ?: BigDecimal.ZERO,
+                maintenanceMarginFraction = data.maintenanceMarginFraction?.toBigDecimal() ?: BigDecimal.ZERO,
+                transferMarginFraction = data.transferMarginFraction?.toBigDecimal() ?: BigDecimal.ZERO,
+                volume24H = data.volume24H?.toBigDecimal() ?: BigDecimal.ZERO,
+                trades24H = data.trades24H?.toInt() ?: 0,
+                openInterest = data.openInterest?.toBigDecimal() ?: BigDecimal.ZERO,
+                incrementalInitialMarginFraction = data.incrementalInitialMarginFraction?.toBigDecimal() ?: BigDecimal.ZERO,
+                incrementalPositionSize = data.incrementalPositionSize?.toBigDecimal() ?: BigDecimal.ZERO,
+                maxPositionSize = data.maxPositionSize?.toBigDecimal() ?: BigDecimal.ZERO,
+                baselinePositionSize = data.baselinePositionSize?.toBigDecimal() ?: BigDecimal.ZERO,
+                assetResolution = data.assetResolution?.toBigInteger() ?: BigInteger.ZERO,
+                syntheticAssetId = data.syntheticAssetId ?: ""
             )
-            markets[it.key] = marketInfo
         }
-
-        return markets.values.toList()
+        return markets
     }
 
-    fun parseMarketStatus(statusStr: String): MarketStatus {
+    private fun onChannelData(message: ChannelData):Map<String, kaiex.model.MarketInfo> {
+        log.debug("Received channel data for $message")
+        message.contents.forEach { (symbol, data) ->
+            if(markets.containsKey(symbol)) {
+                val lastMarket = markets[symbol]
+                markets[symbol] = MarketInfo(
+                    symbol = symbol,
+                    status = if(data.status != null) { parseMarketStatus(data.status) } else { lastMarket!!.status },
+                    indexPrice = data.indexPrice?.toBigDecimal() ?: lastMarket!!.indexPrice,
+                    oraclePrice = data.oraclePrice?.toBigDecimal() ?: lastMarket!!.oraclePrice,
+                    baseAsset = data.baseAsset ?: lastMarket!!.baseAsset,
+                    quoteAsset = data.quoteAsset ?: lastMarket!!.quoteAsset,
+                    stepSize = data.stepSize?.toBigDecimal() ?: lastMarket!!.stepSize,
+                    tickSize = data.tickSize?.toBigDecimal() ?: lastMarket!!.tickSize,
+                    priceChange24H = data.priceChange24H?.toBigDecimal() ?: lastMarket!!.priceChange24H,
+                    nextFundingRate = data.nextFundingRate?.toBigDecimal() ?: lastMarket!!.nextFundingRate,
+                    nextFundingAt = if(data.nextFundingAt != null) { parseNextFundingAt(data.nextFundingAt) } else { lastMarket!!.nextFundingAt },
+                    minOrderSize = data.minOrderSize?.toBigDecimal() ?: lastMarket!!.minOrderSize,
+                    type = if(data.type != null) { parseMarketType(data.type) } else { lastMarket!!.type },
+                    initialMarginFraction = data.initialMarginFraction?.toBigDecimal() ?: lastMarket!!.initialMarginFraction,
+                    maintenanceMarginFraction = data.maintenanceMarginFraction?.toBigDecimal() ?: lastMarket!!.maintenanceMarginFraction,
+                    transferMarginFraction = data.transferMarginFraction?.toBigDecimal() ?: lastMarket!!.transferMarginFraction,
+                    volume24H = data.volume24H?.toBigDecimal() ?: lastMarket!!.volume24H,
+                    trades24H = data.trades24H?.toInt() ?: lastMarket!!.trades24H,
+                    openInterest = data.openInterest?.toBigDecimal() ?: lastMarket!!.openInterest,
+                    incrementalInitialMarginFraction = data.incrementalInitialMarginFraction?.toBigDecimal() ?: lastMarket!!.incrementalInitialMarginFraction,
+                    incrementalPositionSize = data.incrementalPositionSize?.toBigDecimal() ?: lastMarket!!.incrementalPositionSize,
+                    maxPositionSize = data.maxPositionSize?.toBigDecimal() ?: lastMarket!!.maxPositionSize,
+                    baselinePositionSize = data.baselinePositionSize?.toBigDecimal() ?: lastMarket!!.baselinePositionSize,
+                    assetResolution = data.assetResolution?.toBigInteger() ?: lastMarket!!.assetResolution,
+                    syntheticAssetId = data.syntheticAssetId ?: lastMarket!!.syntheticAssetId
+                )
+            }
+        }
+
+        return markets
+    }
+
+    private fun parseMarketStatus(statusStr: String): MarketStatus {
         return try {
             MarketStatus.valueOf(statusStr)
         } catch (e: IllegalArgumentException) {
@@ -204,24 +262,49 @@ class DYDXMarketsSocketEndpoint: DYDXSocketEndpoint<MarketInfo> {
         }
     }
 
-    private fun onChannelData(message: ChannelData):List<kaiex.model.MarketInfo> {
-        log.debug("Received channel data for $message")
-        message.contents.forEach { update ->
-            if(markets.containsKey(update.key)) {
-                val marketInfo = kaiex.model.MarketInfo(
-                    symbol = update.key,
-                    status = MarketStatus.valueOf(update.value.status ?: markets[update.key]?.status.toString()),
-                    indexPrice = update.value.indexPrice?.toBigDecimalOrNull() ?: markets[update.key]?.indexPrice!!,
-                    oraclePrice = update.value.oraclePrice?.toBigDecimalOrNull() ?: markets[update.key]?.oraclePrice!!,
-                    Instant.now()
-                )
-                markets[update.key] = marketInfo
-
-            }
+    private fun parseMarketType(typeStr: String): MarketType {
+        return try {
+            MarketType.valueOf(typeStr)
+        } catch (e: IllegalArgumentException) {
+            throw ExchangeException("Cannot market info update: Invalid field type: $typeStr")
         }
-
-        return markets.filterKeys { it in message.contents.keys }.values.toList()
     }
+
+    private fun parseNextFundingAt(atStr: String): Instant {
+        return try {
+            Instant.parse(atStr)
+        } catch (e: IllegalArgumentException) {
+            throw throw ExchangeException("Cannot market info update: Invalid field nextFundingAt: $atStr")
+        }
+    }
+
+    private fun convertMarketInfo(symbol: String, data: MarketInfo) = MarketInfo(
+        symbol = symbol,
+        status = parseMarketStatus(data.status!!),
+        indexPrice = data.indexPrice?.toBigDecimal() ?: BigDecimal.ZERO,
+        oraclePrice = data.oraclePrice?.toBigDecimal() ?: BigDecimal.ZERO,
+        baseAsset = data.baseAsset ?: "",
+        quoteAsset = data.quoteAsset ?: "",
+        stepSize = data.stepSize?.toBigDecimal() ?: BigDecimal.ZERO,
+        tickSize = data.tickSize?.toBigDecimal() ?: BigDecimal.ZERO,
+        priceChange24H = data.priceChange24H?.toBigDecimal() ?: BigDecimal.ZERO,
+        nextFundingRate = data.nextFundingRate?.toBigDecimal() ?: BigDecimal.ZERO,
+        nextFundingAt = Instant.parse(data.nextFundingAt) ?: throw ExchangeException("Cannot market info update: Invalid field nextFundingAt: ${data.nextFundingAt}"),
+        minOrderSize = data.minOrderSize?.toBigDecimal() ?: BigDecimal.ZERO,
+        type = parseMarketType(data.type!!),
+        initialMarginFraction = data.initialMarginFraction?.toBigDecimal() ?: BigDecimal.ZERO,
+        maintenanceMarginFraction = data.maintenanceMarginFraction?.toBigDecimal() ?: BigDecimal.ZERO,
+        transferMarginFraction = data.transferMarginFraction?.toBigDecimal() ?: BigDecimal.ZERO,
+        volume24H = data.volume24H?.toBigDecimal() ?: BigDecimal.ZERO,
+        trades24H = data.trades24H?.toInt() ?: 0,
+        openInterest = data.openInterest?.toBigDecimal() ?: BigDecimal.ZERO,
+        incrementalInitialMarginFraction = data.incrementalInitialMarginFraction?.toBigDecimal() ?: BigDecimal.ZERO,
+        incrementalPositionSize = data.incrementalPositionSize?.toBigDecimal() ?: BigDecimal.ZERO,
+        maxPositionSize = data.maxPositionSize?.toBigDecimal() ?: BigDecimal.ZERO,
+        baselinePositionSize = data.baselinePositionSize?.toBigDecimal() ?: BigDecimal.ZERO,
+        assetResolution = data.assetResolution?.toBigInteger() ?: BigInteger.ZERO,
+        syntheticAssetId = data.syntheticAssetId ?: ""
+    )
 
     override suspend fun disconnect() {
         TODO("Not yet implemented")
