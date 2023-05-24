@@ -1,8 +1,10 @@
-package kaiex.strategy
+package kaiex.strategies
 
 import kaiex.indicator.MACD
 import kaiex.model.MarketDataSnapshot
 import kaiex.model.OrderUpdate
+import kaiex.strategy.KaiexBaseStrategy
+import kaiex.strategy.StrategyParams
 import kaiex.ui.SeriesColor
 import kaiex.ui.createChart
 

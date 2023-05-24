@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
 val logback_version: String by project
 val koin_version: String by project
 val ktor_version: String by project
@@ -55,6 +57,12 @@ dependencies {
     // TESTING
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.hamcrest:java-hamcrest:2.0.0.0")
+
+    // STDLIB
+    implementation(kotlin("stdlib-jdk8"))
+
+    // STRATEGIES
+    runtimeOnly(project(":strategies"))
 }
 
 tasks.test {
@@ -67,4 +75,12 @@ kotlin {
 
 application {
     mainClass.set("MainKt")
+}
+val compileKotlin: KotlinCompile by tasks
+compileKotlin.kotlinOptions {
+    jvmTarget = "1.8"
+}
+val compileTestKotlin: KotlinCompile by tasks
+compileTestKotlin.kotlinOptions {
+    jvmTarget = "1.8"
 }

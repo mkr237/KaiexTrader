@@ -3,6 +3,9 @@ import json
 from datetime import datetime, timezone
 from threading import Thread
 
+# Script for pulling DYDX tick data into CSV files - files (one for each pair) are
+# rolled over at midnight UTC each day
+
 CURRENCY_PAIRS = ["BTC-USD", "ETH-USD"]  # Add more pairs as needed
 files = {}
 current_file_days = {}
