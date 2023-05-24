@@ -69,13 +69,13 @@ abstract class KaiexBaseStrategy : KoinComponent, KaiexStrategy {
      * Order management functions
      */
     //TODO remove the hard-coded values
-    protected fun buyAtMarket(symbol: String, size: Float) =
+    protected fun buyAtMarket(symbol: String, size: Double) =
         createOrder(symbol, OrderType.MARKET, OrderSide.BUY, BigDecimal(35000), size.toBigDecimal(), BigDecimal(0.015), OrderTimeInForce.FOK)
 
-    protected fun sellAtMarket(symbol: String, size: Float) =
+    protected fun sellAtMarket(symbol: String, size: Double) =
         createOrder(symbol, OrderType.MARKET, OrderSide.SELL, BigDecimal(25000), size.toBigDecimal(), BigDecimal(0.015), OrderTimeInForce.FOK)
 
-    protected fun setPosition(symbol: String, target: Float) {
+    protected fun setPosition(symbol: String, target: Double) {
 
         val position =  tradeManager.currentPosition(symbol)
         val potentialPosition = tradeManager.potentialPosition(symbol)

@@ -19,7 +19,7 @@ class MACDStrategy(private val parameters: Map<String, String>): KaiexBaseStrate
     private val signalPeriod = strategyParams.getInt("signal")
 
     private val macd = MACD(fastPeriod, slowPeriod, signalPeriod)
-    private val positionSize = 0.02f
+    private val positionSize = 0.02
 
     private val chart = createChart("Default") {
         candleSeries("Candles") {

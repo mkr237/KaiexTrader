@@ -3,10 +3,12 @@ package kaiex.exchange.simulator
 import kaiex.exchange.ExchangeService
 import kaiex.exchange.simulator.adapters.BinanceAdapter
 import kaiex.model.*
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.runBlocking
 import org.koin.core.component.KoinComponent
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -23,7 +25,6 @@ class SimulatorService: KoinComponent, ExchangeService {
     private var lastTrade:Trade? = null
 
     private val positionBySymbol:MutableMap<String, PositionTracker> = mutableMapOf()
-
     private val updateQueue = ArrayBlockingQueue<AccountUpdate>(1)
 
     override suspend fun subscribeAccountUpdates(accountId: String): Flow<AccountUpdate> {

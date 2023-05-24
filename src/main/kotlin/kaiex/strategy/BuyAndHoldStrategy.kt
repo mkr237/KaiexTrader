@@ -1,33 +1,54 @@
 package kaiex.strategy
 
+import kaiex.indicator.MACD
 import kaiex.model.MarketDataSnapshot
 import kaiex.model.OrderUpdate
+import kaiex.ui.SeriesColor
+import kaiex.ui.createChart
 
 /**
  * Strategy that simply buys and HODLs
  */
-class BuyAndHoldStrategy: KaiexBaseStrategy() {
+class BuyAndHoldStrategy(private val parameters: Map<String, String>): KaiexBaseStrategy() {
 
-    private var symbol:String? = null
+    // extract params
+    private val strategyParams = StrategyParams(parameters, setOf("symbol"))
+    private val symbol = strategyParams.getString("symbol")
+    private val size = strategyParams.getDouble("size")
+
+    private val chart = createChart("Default") {
+        candleSeries("Candles") {
+            upColor = SeriesColor.GREEN.rgb
+            downColor = SeriesColor.RED.rgb
+        }
+        valueSeries("Position") {
+            color = SeriesColor.GREY.rgb
+        }
+    }
 
     override fun onCreate() {
-        log.info("onStrategyCreate()")
-
-        // buy and HODL
-        //delay(5000)
-        //buyAtMarket(symbol!!, 0.01f)
+        log.info("onCreate: $parameters")
+        addSymbol(symbol)
+        addChart(chart)
     }
 
     override fun onMarketData(snapshot: Map<String, MarketDataSnapshot>) {
-        log.info("*** Received market data snapshot ***")
-        log.info("Market Data Info: ${snapshot[symbol]?.marketInfo ?: "-"}")
-        log.info("Last Candle: ${snapshot[symbol]?.lastCandle ?: "-"}")
-        log.info("Last Order Book: ${snapshot[symbol]?.lastOrderBook ?: "-"}")
+        log.info("onMarketData: $snapshot")
+
+        val candle = snapshot[symbol]?.lastCandle
+        if (candle?.complete == true) {
+
+            setPosition(symbol, size)
+
+            chart.update(candle.startTimestamp.toEpochMilli()) {
+                "Candles"(listOf(candle.open.toDouble(), candle.high.toDouble(), candle.low.toDouble(), candle.close.toDouble()))
+                "Position"(getCurrentPosition(symbol).toDouble())
+            }
+        }
     }
 
     override fun onOrderUpdate(update: OrderUpdate) {
-        log.info("*** Received order update ***")
-        log.info("Order Update: $update")
+        log.info("onOrderUpdate: $update")
     }
 
     override fun onDestroy() {
