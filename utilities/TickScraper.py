@@ -34,7 +34,7 @@ def on_message(ws, pair, message):
 
                 filename = create_file_name(pair)
                 print(f"Creating new file: {filename}")
-                files[pair] = open(filename, 'w')
+                files[pair] = open(filename, 'a')
                 current_file_days[pair] = trade_day
 
             # Write the data to the file and immediately
