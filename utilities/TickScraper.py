@@ -6,7 +6,7 @@ from threading import Thread
 # Script for pulling DYDX tick data into CSV files - files (one for each pair) are
 # rolled over at midnight UTC each day
 
-CURRENCY_PAIRS = ["BTC-USD", "ETH-USD"]  # Add more pairs as needed
+CURRENCY_PAIRS = ["ETH-USD"]  # Add more pairs as needed"BTC-USD",
 files = {}
 current_file_days = {}
 
@@ -19,8 +19,9 @@ def on_message(ws, pair, message):
     message_dict = json.loads(message)
 
     # Check if the message has the needed data and the type is 'channel_data'
-    if message_dict.get('type') == 'channel_data' and 'contents' in message_dict and 'trades' in message_dict['contents']:
-        print(f"{datetime.now(timezone.utc)}: Received {len(message_dict['contents']['trades'])} trade(s) for {pair}")
+    #
+    if message_dict.get('type') == 'channel_data' and'contents' in message_dict and 'trades' in message_dict['contents']:
+        print(f"{datetime.now(timezone.utc)}: Received {len(message_dict['contents']['trades'])} new trade(s) for {pair}")
         for trade in message_dict['contents']['trades']:
             # Parse the 'createdAt' timestamp to get the day
             trade_day = datetime.fromisoformat(trade['createdAt'].replace('Z', '+00:00')).date()
@@ -29,7 +30,10 @@ def on_message(ws, pair, message):
             if current_file_days.get(pair) is None or trade_day != current_file_days[pair]:
                 if files.get(pair) is not None:
                     files[pair].close()
-                files[pair] = open(create_file_name(pair), 'w')
+
+                filename = create_file_name(pair)
+                print(f"Creating new file: {filename}")
+                files[pair] = open(filename, 'w')
                 current_file_days[pair] = trade_day
 
             # Write the data to the file and immediately
