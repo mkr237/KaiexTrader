@@ -6,13 +6,14 @@ from threading import Thread
 # Script for pulling DYDX tick data into CSV files - files (one for each pair) are
 # rolled over at midnight UTC each day
 
-CURRENCY_PAIRS = ["ETH-USD"]  # Add more pairs as needed"BTC-USD",
+BASE_DIR = "/Users/markraynes/dev/KaiexTrader/utilities"
+CURRENCY_PAIRS = ["BTC-USD", "ETH-USD"]
 files = {}
 current_file_days = {}
 
 def create_file_name(pair):
     """Create a filename based on the current date and currency pair."""
-    return f"{pair}_{datetime.now(timezone.utc).strftime('%Y%m%d')}.dat"
+    return f"{BASE_DIR}/{pair}_{datetime.now(timezone.utc).strftime('%Y%m%d')}.dat"
 
 def on_message(ws, pair, message):
     global files, current_file_days
