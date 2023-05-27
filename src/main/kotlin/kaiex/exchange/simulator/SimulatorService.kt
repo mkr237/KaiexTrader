@@ -3,6 +3,7 @@ package kaiex.exchange.simulator
 import kaiex.exchange.ExchangeException
 import kaiex.exchange.ExchangeService
 import kaiex.exchange.simulator.adapters.BinanceAdapter
+import kaiex.exchange.simulator.adapters.DYDXAdapter
 import kaiex.model.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -89,9 +90,9 @@ class SimulatorService: KoinComponent, ExchangeService {
     }
 
     override suspend fun subscribeTrades(symbol: String): Flow<Trade> {
-        val dataFile = "Binance BTCUSDT-trades-2023-04-04.csv"
+        val dataFile = "BTC-USD_20230526.dat"
         log.info("Subscribing to: $dataFile")
-        return TickPlayer(dataFile, BinanceAdapter(symbol), relativeTime = false).start()
+        return TickPlayer(dataFile, DYDXAdapter(symbol), relativeTime = false).start()
             .onCompletion { updateQueue.put(AccountUpdate("", emptyList(), emptyList(), emptyList())) }
             .onEach { lastTrade = it }
     }

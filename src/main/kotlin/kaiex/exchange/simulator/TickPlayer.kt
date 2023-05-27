@@ -23,7 +23,7 @@ class TickPlayer(val fileName: String, val adapter: TickAdapter, val relativeTim
 
     protected val log: Logger = LoggerFactory.getLogger(javaClass.simpleName)
 
-    private val MAX_TICKS = 30000
+    private val MAX_TICKS = 300
 
     fun start(): Flow<Trade> = flow {
         val file = File(Thread.currentThread().contextClassLoader.getResource(fileName).toURI())
@@ -42,7 +42,7 @@ class TickPlayer(val fileName: String, val adapter: TickAdapter, val relativeTim
                 lines.forEachIndexed { index, line ->
 
                     // take every hundreth trade to keep voluem reasonable (not for actual back-testing!)
-                    if (index % 100 == 0 && index <= MAX_TICKS) {
+                    if (index <= MAX_TICKS) {
 
                         val trade = adapter.convert(line)
                         val delay = if (index == 0 || relativeTime == false) {
