@@ -38,45 +38,38 @@ col4.metric("Sharpe", sharpe, sharpe)
 st.divider()
 
 # Get market data
-data_md = data.getMarketData()
-
-# Convert series to pandas DataFrames
-timestamps = pd.to_datetime(pd.Series(data_md['series']['Timestamps']['data']), unit='ms')
-candles = pd.DataFrame(data_md['series']['Candles']['data'], columns=['open', 'high', 'low', 'close'])
-macd = pd.Series(data_md['series']['MACD']['data'])
-signal = pd.Series(data_md['series']['Signal']['data'])
-position = pd.Series(data_md['series']['Position']['data'])
+data_md = data.getChartData()
+chartHeight = 800
+plotNames = [obj['name'] for obj in data_md['plots']]
+plotHeights = [obj['height'] for obj in data_md['plots']]
+numPlots = len(data_md['plots'])
+timestamps = pd.to_datetime(pd.Series(data_md['timestamps']), unit='ms')
 
 # Create a subplot for each series
-fig = make_subplots(rows=3, cols=1, shared_xaxes=True, subplot_titles=('Market 1m', 'MACD', 'Position'), row_heights=[0.6, 0.2, 0.2])
+fig = make_subplots(rows=numPlots, cols=1, shared_xaxes=True, subplot_titles=plotNames, row_heights=plotHeights)
 
+plotIdx = 1
+for plot in data_md['plots']:
+    for name, series in plot['seriesData'].items():
+        if series['type'] == 'CANDLE':
+            df = pd.DataFrame(series['data'], columns=['open', 'high', 'low', 'close'])
+            fig.add_trace(
+                go.Candlestick(name=name, x=timestamps, open=df['open'], high=df['high'], low=df['low'], close=df['close'], legendgroup=plotIdx),
+                row=plotIdx, col=1
+            )
+        elif series['type'] == 'LINE':
+            df = pd.Series(series['data'])
+            fig.add_trace(
+                go.Scatter(name=name, x=timestamps, y=df, mode='lines', line=dict(color=series['color'], shape=series['shape']), legendgroup=plotIdx),
+                row=plotIdx, col=1
+            )
+        else:
+            print("Invalid series type")
 
-# Add Candlestick plot
-fig.add_trace(
-    go.Candlestick(x=timestamps, open=candles['open'], high=candles['high'], low=candles['low'], close=candles['close']),
-    row=1, col=1
-)
-
-# Add MACD plot
-fig.add_trace(
-    go.Scatter(x=timestamps, y=macd, mode='lines', line=dict(color=data_md['series']['MACD']['color'])),
-    row=2, col=1
-)
-
-# Add Signal plot
-fig.add_trace(
-    go.Scatter(x=timestamps, y=signal, mode='lines', line=dict(color=data_md['series']['Signal']['color'])),
-    row=2, col=1
-)
-
-# Add Position plot
-fig.add_trace(
-    go.Scatter(x=timestamps, y=position, mode='lines', line=dict(color=data_md['series']['Position']['color'], shape='hv')),
-    row=3, col=1
-)
+    plotIdx = plotIdx + 1
 
 # Update layout
-fig.update_layout(height=800, xaxis_rangeslider_visible=False, autosize=False, showlegend=False)
+fig.update_layout(height=chartHeight, xaxis_rangeslider_visible=False, autosize=False)
 
 # Show the plot
 st.plotly_chart(fig, use_container_width=True)

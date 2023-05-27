@@ -17,20 +17,20 @@ class BuyAndHoldStrategy(private val parameters: Map<String, String>): KaiexBase
     private val symbol = strategyParams.getString("symbol")
     private val size = strategyParams.getDouble("size")
 
-    private val chart = createChart("Default") {
-        candleSeries("Candles") {
-            upColor = SeriesColor.GREEN.rgb
-            downColor = SeriesColor.RED.rgb
-        }
-        valueSeries("Position") {
-            color = SeriesColor.GREY.rgb
-        }
-    }
+//    private val chart = createChart("Default") {
+//        candleSeries("Candles") {
+//            upColor = SeriesColor.GREEN.rgb
+//            downColor = SeriesColor.RED.rgb
+//        }
+//        lineSeries("Position") {
+//            color = SeriesColor.GREY.rgb
+//        }
+//    }
 
     override fun onCreate() {
         log.info("onCreate: $parameters")
         addSymbol(symbol)
-        addChart(chart)
+        //addChart(chart)
     }
 
     override fun onMarketData(snapshot: Map<String, MarketDataSnapshot>) {
@@ -41,10 +41,10 @@ class BuyAndHoldStrategy(private val parameters: Map<String, String>): KaiexBase
 
             setPosition(symbol, size)
 
-            chart.update(candle.startTimestamp.toEpochMilli()) {
-                "Candles"(listOf(candle.open.toDouble(), candle.high.toDouble(), candle.low.toDouble(), candle.close.toDouble()))
-                "Position"(getCurrentPosition(symbol).toDouble())
-            }
+//            chart.update(candle.startTimestamp.toEpochMilli()) {
+//                "Candles"(listOf(candle.open.toDouble(), candle.high.toDouble(), candle.low.toDouble(), candle.close.toDouble()))
+//                "Position"(getCurrentPosition(symbol).toDouble())
+//            }
         }
     }
 

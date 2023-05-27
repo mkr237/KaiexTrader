@@ -30,7 +30,7 @@ def getTradingMetrics():
 #
 # Get market data
 #
-def getMarketData():
+def getChartData():
 
     # Make a GET request to the API endpoint
     response = requests.get('http://localhost:8080/api/chart')

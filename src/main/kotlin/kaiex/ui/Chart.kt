@@ -1,30 +1,11 @@
 package kaiex.ui
 
 import com.google.gson.Gson
-import java.time.Instant
 
-sealed interface Series {
-    val data: MutableList<Any>
+enum class SeriesType {
+    CANDLE,
+    LINE
 }
-
-data class TimestampSeries(
-    override val data: MutableList<Any> = mutableListOf()
-) : Series
-
-data class ValueSeries(
-    var color: String? = null,
-    override val data: MutableList<Any> = mutableListOf()
-) : Series
-
-data class CandleSeries(
-    var upColor: String? = null,
-    var downColor: String? = null,
-    override val data: MutableList<Any> = mutableListOf()
-) : Series
-
-data class ChartData(
-    var series: MutableMap<String, Series> = mutableMapOf()
-)
 
 enum class SeriesColor(val rgb: String) {
     RED("#FF0000"),
@@ -34,43 +15,72 @@ enum class SeriesColor(val rgb: String) {
     GREY("#CCCCCC")
 }
 
-data class Chart(val name: String) {
-    private val chartData = ChartData()
+sealed interface Series {
+    val type: SeriesType
+    val data: MutableList<Any>
+}
 
-    init {
-        val timestampSeries = TimestampSeries()
-        chartData.series["Timestamps"] = timestampSeries
-    }
+enum class LineShape { linear, spline, hv, vh, hvh, vhv }
 
-    fun valueSeries(name: String, block: ValueSeries.() -> Unit) {
-        val valueSeries = ValueSeries().apply(block)
-        chartData.series[name] = valueSeries
-    }
+data class LineSeries(
+    override val type:SeriesType = SeriesType.LINE,
+    var color: String? = null,
+    var shape: LineShape? = LineShape.linear,
+    override val data: MutableList<Any> = mutableListOf(),
+) : Series
 
-    fun candleSeries(name: String, block: CandleSeries.() -> Unit) {
-        val candleSeries = CandleSeries().apply(block)
-        chartData.series[name] = candleSeries
+data class CandleSeries(
+    override val type:SeriesType = SeriesType.CANDLE,
+    var upColor: String? = null,
+    var downColor: String? = null,
+    override val data: MutableList<Any> = mutableListOf(),
+) : Series
+
+class Chart(val name: String) {
+    private val timestamps: MutableList<Long> = mutableListOf()
+    private val plots = mutableListOf<Plot>()
+
+    fun plot(name: String, block: Plot.() -> Unit) {
+        val plot = Plot(name)
+        plot.block()
+        plots.add(plot)
     }
 
     fun update(timestamp: Long, block: ChartUpdater.() -> Unit) {
-        chartData.series["Timestamps"]?.data?.add(timestamp)
-        val updater = ChartUpdater(chartData.series)
+        val updater = ChartUpdater(timestamp)
         updater.block()
-    }
-
-    fun toJson(): String = Gson().toJson(chartData)
-
-    inner class ChartUpdater(private val seriesData: MutableMap<String, Series>) {
-
-        operator fun String.invoke(value: Any) {
-            when (val series = seriesData[this]) {
-                is ValueSeries -> series.data.add(value as Double)
-                is CandleSeries -> series.data.add(value as List<Double>)
-                else -> {
-
+        timestamps.add(timestamp)
+        plots.forEach { plot ->
+            plot.seriesData.forEach { (seriesName, series) ->
+                updater.updatedValues[seriesName]?.let { updatedValue ->
+                    series.data.add(updatedValue)
                 }
             }
         }
+    }
+
+    fun toJson(): String = Gson().toJson(this)
+}
+
+data class ChartUpdater(val timestamp: Long) {
+    val updatedValues: MutableMap<String, Any> = mutableMapOf()
+    fun set(seriesName: String, value: Any) {
+        updatedValues[seriesName] = value
+    }
+}
+
+data class Plot(val name: String) {
+    var height: Double = 0.0
+    var seriesData: MutableMap<String, Series> = mutableMapOf()
+
+    fun lineSeries(name: String, block: LineSeries.() -> Unit) {
+        val series = LineSeries().apply(block)
+        seriesData[name] = series
+    }
+
+    fun candleSeries(name: String, block: CandleSeries.() -> Unit) {
+        val series = CandleSeries().apply(block)
+        seriesData[name] = series
     }
 }
 
@@ -78,36 +88,4 @@ fun createChart(name:String, block: Chart.() -> Unit): Chart {
     val chart = Chart(name)
     chart.block()
     return chart
-}
-
-// TODO turn into a test
-fun main() {
-    val chart = createChart("Default") {
-        valueSeries("MACD") {
-            color = "FF0000"
-        }
-        valueSeries("Signal") {
-            color = "00FF00"
-        }
-        candleSeries("Candles") {
-            upColor = "#00FF00"
-            downColor = "#FF0000"
-        }
-    }
-
-    val timestamp1 = Instant.parse("2023-01-01T00:00:00Z")
-    chart.update(timestamp1.toEpochMilli()) {
-        "MACD"(105.0)
-        "Signal"(101.0)
-        "Candles"(listOf(100.0, 120.0, 90.0, 110.0))
-    }
-
-    val timestamp2 = Instant.parse("2023-01-01T01:00:00Z")
-    chart.update(timestamp2.toEpochMilli()) {
-        "MACD"(106.0)
-        "Signal"(102.0)
-        "Candles"(listOf(101.0, 121.0, 91.0, 111.0))
-    }
-
-    println(chart.toJson())
 }

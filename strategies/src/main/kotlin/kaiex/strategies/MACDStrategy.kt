@@ -5,8 +5,10 @@ import kaiex.model.MarketDataSnapshot
 import kaiex.model.OrderUpdate
 import kaiex.strategy.KaiexBaseStrategy
 import kaiex.strategy.StrategyParams
+import kaiex.ui.LineShape
 import kaiex.ui.SeriesColor
 import kaiex.ui.createChart
+import java.time.Instant
 
 /**
  * Simple MACD Strategy
@@ -24,18 +26,28 @@ class MACDStrategy(private val parameters: Map<String, String>): KaiexBaseStrate
     private val positionSize = 0.02
 
     private val chart = createChart("Default") {
-        candleSeries("Candles") {
-            upColor = SeriesColor.GREEN.rgb
-            downColor = SeriesColor.RED.rgb
+        plot("Trade Data") {
+            height = 0.6
+            candleSeries("Candles") {
+                upColor = SeriesColor.GREEN.rgb
+                downColor = SeriesColor.RED.rgb
+            }
         }
-        valueSeries("MACD") {
-            color = SeriesColor.BLUE.rgb
+        plot("MACD Indicator") {
+            height = 0.2
+            lineSeries("MACD") {
+                color = SeriesColor.BLUE.rgb
+            }
+            lineSeries("Signal") {
+                color = SeriesColor.ORANGE.rgb
+            }
         }
-        valueSeries("Signal") {
-            color = SeriesColor.ORANGE.rgb
-        }
-        valueSeries("Position") {
-            color = SeriesColor.GREY.rgb
+        plot("Postion") {
+            height = 0.2
+            lineSeries("Position") {
+                color = SeriesColor.GREY.rgb
+                shape = LineShape.hv
+            }
         }
     }
 
@@ -65,11 +77,12 @@ class MACDStrategy(private val parameters: Map<String, String>): KaiexBaseStrate
                 setPosition(symbol, -positionSize)
             }
 
+            // update chart
             chart.update(candle.startTimestamp.toEpochMilli()) {
-                "Candles"(listOf(candle.open.toDouble(), candle.high.toDouble(), candle.low.toDouble(), candle.close.toDouble()))
-                "MACD"(macdLine)
-                "Signal"(signalLine)
-                "Position"(getCurrentPosition(symbol).toDouble())
+                set("Candles", listOf(candle.open.toDouble(), candle.high.toDouble(), candle.low.toDouble(), candle.close.toDouble()))
+                set("MACD", macdLine)
+                set("Signal", signalLine)
+                set("Position", getCurrentPosition(symbol).toDouble())
             }
         }
     }
