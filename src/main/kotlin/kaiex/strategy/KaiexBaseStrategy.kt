@@ -80,8 +80,8 @@ abstract class KaiexBaseStrategy : KoinComponent, KaiexStrategy {
         val position =  tradeManager.currentPosition(symbol)
         val potentialPosition = tradeManager.potentialPosition(symbol)
 
-        if (potentialPosition != position) {
-            log.info("Position mismatch - cannot send order")
+        if (potentialPosition.compareTo(position) != 0) {
+            log.info("Position mismatch ($potentialPosition != $position) - cannot send order")
             return
         }
 
@@ -128,5 +128,6 @@ abstract class KaiexBaseStrategy : KoinComponent, KaiexStrategy {
     /**
      * Misc. functions
      */
-    protected fun getCurrentPosition(symbol: String): BigDecimal = tradeManager.currentPosition(symbol)
+    protected fun getCurrentPosition(symbol: String) = tradeManager.currentPosition(symbol).toDouble()
+    protected fun isFlat(symbol: String) = tradeManager.currentPosition(symbol) == BigDecimal.ZERO
 }

@@ -4,7 +4,8 @@ import com.google.gson.Gson
 
 enum class SeriesType {
     CANDLE,
-    LINE
+    LINE,
+    BAR
 }
 
 enum class SeriesColor(val rgb: String) {
@@ -12,7 +13,9 @@ enum class SeriesColor(val rgb: String) {
     GREEN("#00FF00"),
     BLUE("#2196F3"),
     ORANGE("#FC6C02"),
-    GREY("#CCCCCC")
+    GREY("#CCCCCC");
+
+    override fun toString() = rgb
 }
 
 sealed interface Series {
@@ -26,6 +29,13 @@ data class LineSeries(
     override val type:SeriesType = SeriesType.LINE,
     var color: String? = null,
     var shape: LineShape? = LineShape.linear,
+    override val data: MutableList<Any> = mutableListOf(),
+) : Series
+
+data class BarSeries(
+    override val type:SeriesType = SeriesType.BAR,
+    var upColor: String? = null,
+    var downColor: String? = null,
     override val data: MutableList<Any> = mutableListOf(),
 ) : Series
 
@@ -75,6 +85,11 @@ data class Plot(val name: String) {
 
     fun lineSeries(name: String, block: LineSeries.() -> Unit) {
         val series = LineSeries().apply(block)
+        seriesData[name] = series
+    }
+
+    fun barSeries(name: String, block: BarSeries.() -> Unit) {
+        val series = BarSeries().apply(block)
         seriesData[name] = series
     }
 

@@ -10,6 +10,7 @@ import org.koin.core.component.inject
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import toCandles
+import java.time.temporal.ChronoUnit
 import java.util.concurrent.ConcurrentHashMap
 
 class MarketDataManager: KoinComponent {
@@ -59,7 +60,7 @@ class MarketDataManager: KoinComponent {
             .onEach { trade:Trade ->
                 snapshots[symbol]?.lastTrade = trade
             }
-            .toCandles().collect { candle: Candle ->
+            .toCandles(ChronoUnit.MINUTES).collect { candle: Candle ->
                 snapshots[symbol]?.lastCandle = candle
 
                 // if the candle is complete, update indicators

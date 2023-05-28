@@ -10,11 +10,26 @@ st.set_page_config(layout="wide")
 #
 # Sidebar
 #
-sidebar()
+#sidebar()
 
 #
 # Main Page
 #
+
+st.markdown(
+    """
+    <style>
+    /* Reduce spacing at the top */
+    .stApp { margin-top: -60px; }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+st.header("MACD")
+st.write("Fast: 26, Slow: 10, Signal: 9")
+
+st.divider()
 
 # Metrics
 metrics = data.getTradingMetrics()
@@ -63,6 +78,14 @@ for plot in data_md['plots']:
                 go.Scatter(name=name, x=timestamps, y=df, mode='lines', line=dict(color=series['color'], shape=series['shape']), legendgroup=plotIdx),
                 row=plotIdx, col=1
             )
+        elif series['type'] == 'BAR':
+            df = pd.Series(series['data'])
+            fig.add_trace(
+                go.Bar(name=name, x=timestamps, y=df, marker=dict(color=df.apply(lambda x: '#9FD8CE' if x > 0 else '#FF9C99'),
+                                                                  line=dict(color='black', width=1),
+                                                                  opacity=df.apply(lambda x: 1.0 if x > 0 else 0.8)), legendgroup=plotIdx),
+                row=plotIdx, col=1
+            )
         else:
             print("Invalid series type")
 
@@ -74,6 +97,21 @@ fig.update_layout(height=chartHeight, xaxis_rangeslider_visible=False, autosize=
 # Show the plot
 st.plotly_chart(fig, use_container_width=True)
 
+st.divider()
+
+# Positions Table
+header_style = '''
+    <style>
+    .dataframe th {
+        background-color: lightblue;
+    }
+    </style>
+'''
+st.write(header_style, unsafe_allow_html=True)
+positions_df = data.getPositionsData()
+st.subheader(f"Positions ({len(positions_df.data)})")
+st.dataframe(positions_df, use_container_width=True)
+
 # Orders Table
 header_style = '''
     <style>
@@ -84,4 +122,5 @@ header_style = '''
 '''
 st.write(header_style, unsafe_allow_html=True)
 orders_df = data.getOrderData()
+st.subheader(f"Orders  ({len(orders_df.data)})")
 st.dataframe(orders_df, use_container_width=True)

@@ -58,7 +58,10 @@ data class Candle (
     val volume: BigDecimal,
     val historical: Boolean,
     val complete: Boolean
-)
+) {
+    fun isGreen() = open <= close
+    fun isRed() = open > close
+}
 
 data class Trade (
     val symbol:String,

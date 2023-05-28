@@ -6,7 +6,7 @@ import java.math.BigDecimal
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 
-fun Flow<Trade>.toCandles(): Flow<Candle> = flow {
+fun Flow<Trade>.toCandles(period: ChronoUnit): Flow<Candle> = flow {
 
     var startTime:Instant? = null
     var lastUpdate:Instant? = null
@@ -29,11 +29,11 @@ fun Flow<Trade>.toCandles(): Flow<Candle> = flow {
             close = trade.price
             tradeCount = 1
             totalVolume = trade.size
-            startTime = trade.createdAt.truncatedTo(ChronoUnit.MINUTES)
-            lastUpdate = trade.createdAt.truncatedTo(ChronoUnit.MINUTES)
+            startTime = trade.createdAt.truncatedTo(period)
+            lastUpdate = trade.createdAt.truncatedTo(period)
             emit(Candle(symbol, startTime!!, lastUpdate!!, open, high, low, close, tradeCount, totalVolume, trade.historical,false))
 
-        } else if (trade.createdAt.truncatedTo(ChronoUnit.MINUTES) != startTime) {
+        } else if (trade.createdAt.truncatedTo(period) != startTime) {
 
             // send the previous candle
             emit(Candle(symbol, startTime!!, lastUpdate!!, open, high, low, close, tradeCount, totalVolume, trade.historical,true))
@@ -45,8 +45,8 @@ fun Flow<Trade>.toCandles(): Flow<Candle> = flow {
             close = trade.price
             tradeCount = 1
             totalVolume = trade.size
-            startTime = trade.createdAt.truncatedTo(ChronoUnit.MINUTES)
-            lastUpdate = trade.createdAt.truncatedTo(ChronoUnit.MINUTES)
+            startTime = trade.createdAt.truncatedTo(period)
+            lastUpdate = trade.createdAt.truncatedTo(period)
             emit(Candle(symbol, startTime!!, lastUpdate!!, open, high, low, close, tradeCount, totalVolume, trade.historical,false))
 
         } else {
@@ -57,7 +57,7 @@ fun Flow<Trade>.toCandles(): Flow<Candle> = flow {
             close = trade.price
             tradeCount++
             totalVolume += trade.size
-            lastUpdate = trade.createdAt.truncatedTo(ChronoUnit.MINUTES)
+            lastUpdate = trade.createdAt.truncatedTo(period)
             emit(Candle(symbol, startTime!!, lastUpdate!!, open, high, low, close, tradeCount, totalVolume, trade.historical,false))
         }
     }

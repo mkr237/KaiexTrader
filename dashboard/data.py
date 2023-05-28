@@ -1,6 +1,6 @@
-import requests
 import pandas as pd
-import datetime
+import requests
+
 
 #
 # Get trading metrics
@@ -49,10 +49,12 @@ def getOrderData():
 
     # Make GET requests to the API endpoints for orders and fills
     orders_response = requests.get('http://localhost:8080/api/orders')
-    orders_data = orders_response.json()
 
     # Check if the requests were successful (status code 200)
     if orders_response.status_code == 200:
+
+        orders_data = orders_response.json()
+
         # Convert response data to a tabular format
         table_data = []
         for order_id, order_data in sorted(orders_data.items(), key=lambda x: x[1]["createdAt"]):
@@ -76,8 +78,6 @@ def getOrderData():
                     "ID": "..." + fill["fillId"][-3:],
                     "price": fill["price"],
                     "size": fill["size"],
-                    #"fee": fill["fee"],
-                    #"role": fill["role"],
                     "createdAt": pd.to_datetime(fill["createdAt"], unit="ms"),
                     "updatedAt": pd.to_datetime(fill["updatedAt"], unit="ms"),
                 }
@@ -88,6 +88,38 @@ def getOrderData():
 
         # Apply row-level styling
         styled_df = orders_df.style.apply(lambda x: ['background-color: #EEEEEE' if x['symbol'] == 'BTC-USD' else '' for i in x], axis=1)
+        return styled_df
+
+    else:
+        return pd.DataFrame.empty
+
+def getPositionsData():
+
+    # Make GET requests to the API endpoints for orders and fills
+    positions_response = requests.get('http://localhost:8080/api/positions')
+
+    # Check if the requests were successful (status code 200)
+    if positions_response.status_code == 200:
+
+        positions_data = positions_response.json()
+
+        table_data = []
+        for symbol, positions in positions_data.items():
+            for position_id, position in positions.items():
+                position["symbol"] = symbol
+                table_data.append(position)
+
+        # Create a DataFrame from the list of dictionaries
+        positions_df = pd.DataFrame(table_data)
+
+        # Convert the timestamp columns to datetime
+        date_columns = ["closedAt", "updatedAt", "createdAt"]
+        positions_df[date_columns] = positions_df[date_columns].apply(pd.to_datetime, unit="ms")
+
+        subset_df = positions_df.loc[:, ['positionId', 'symbol', 'side', 'status', 'size', 'entryPrice', 'exitPrice', 'realizedPnl']]
+
+        # Apply row-level styling
+        styled_df = subset_df.style.apply(lambda x: ['background-color: #9FD8CE' if x['realizedPnl'] >= 0 else 'background-color: #FF9C99' for i in x], axis=1)
         return styled_df
 
     else:
