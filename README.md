@@ -1,6 +1,12 @@
 # Kaiex Trader
 
-KaiexTrader (name TBC) is a algorithmic trading platform for decentralised crypto exchanges. **It is an experimental WIP and as such highly unusable at present**, but the intention is to provide initial support for DYDX and a simple framework for the creation and execution of algorithmic trading strategies.  Beyond that, it is envisaged that further exchanges could be added in future.
+KaiexTrader is an algorithmic trading platform that provides the folloiwng:
+
+- A framework for defining and executing trading strategies
+- A means to backtest strategies and render key metrics and charts in Streamlit/Plotly
+- Integration with the DYDX excahange (trades, orderbook, account updates)
+
+Note, KaiexTrader is a **toy application** used for learning and experimentation and as such **should not be used for real-life trading**.
 
 ## Table of Contents
 
